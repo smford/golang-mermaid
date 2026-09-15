@@ -41,14 +41,17 @@ go build -o bin/mermaid-term cmd/mermaid-term/main.go
 # Render automatically (iTerm2 image when supported, ASCII otherwise):
 ./bin/mermaid-term testdata/architecture.mmd
 
+# Render with modern dark slate theme and executive card frame:
+./bin/mermaid-term -frame -title="Microservices Architecture" -theme=slate testdata/architecture.mmd
+
 # Force ASCII mode:
 ./bin/mermaid-term -mode=ascii testdata/incident_response.mmd
 
-# Force Unicode box-drawing mode:
-./bin/mermaid-term -mode=unicode testdata/sequence_auth.mmd
+# Force Unicode box-drawing mode with card frame:
+./bin/mermaid-term -mode=unicode -frame -title="Zero-Trust Authentication" testdata/sequence_auth.mmd
 
-# Render with verbose SRE diagnostics:
-./bin/mermaid-term -v testdata/state_machine.mmd
+# Render with custom column width and verbose SRE diagnostics:
+./bin/mermaid-term -columns=130 -v testdata/state_machine.mmd
 
 # Pipe diagram directly from stdin:
 cat testdata/database_er.mmd | ./bin/mermaid-term

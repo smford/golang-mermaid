@@ -45,11 +45,10 @@ func New(opts ...Option) *Printer {
 
 	// Initialize default renderers if not supplied
 	if cfg.ImageRenderer == nil {
-		cfg.ImageRenderer = NewResilientImageRenderer("", cfg.Timeout)
+		cfg.ImageRenderer = NewResilientImageRendererWithScale("", cfg.Timeout, cfg.Scale)
 	}
 	if cfg.TextRenderer == nil {
-		strictASCII := cfg.Mode == ModeASCII
-		cfg.TextRenderer = NewFallbackTextRenderer(strictASCII, cfg.ImageRenderer)
+		cfg.TextRenderer = NewFallbackTextRendererFromConfig(cfg)
 	}
 
 	return &Printer{config: cfg}

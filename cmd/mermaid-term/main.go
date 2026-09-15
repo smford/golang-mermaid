@@ -19,10 +19,19 @@ func main() {
 		width      = flag.String("width", "auto", "Image width for iTerm2 (e.g. 'auto', '80%', '800px', '60cell')")
 		height     = flag.String("height", "auto", "Image height for iTerm2 (e.g. 'auto', '400px', '30cell')")
 		krokiURL   = flag.String("kroki-url", "https://kroki.io", "Base URL for the Kroki diagram rendering service")
-		theme      = flag.String("theme", "default", "Diagram theme (e.g. 'default', 'dark', 'light', 'forest')")
+		theme      = flag.String("theme", "default", "Diagram theme ('default', 'slate', 'blueprint', 'neon', 'amber', 'phosphor', 'monokai')")
+		columns    = flag.Int("columns", 0, "Terminal column width override for text diagram layout (0 for auto)")
+		paddingX   = flag.Int("padding-x", 1, "Horizontal box padding inside nodes")
+		paddingY   = flag.Int("padding-y", 0, "Vertical box padding inside nodes")
+		sharp      = flag.Bool("sharp", false, "Use sharp corners (┌──┐) instead of rounded corners (╭──╮)")
+		hyperlinks = flag.Bool("hyperlinks", false, "Enable OSC 8 terminal hyperlinks for click actions")
+		frame      = flag.Bool("frame", false, "Wrap diagram in an executive card border frame")
+		title      = flag.String("title", "", "Optional diagram title displayed in frame header")
+		noColor    = flag.Bool("no-color", false, "Disable ANSI color output in text diagrams")
 		timeoutSec = flag.Int("timeout", 10, "Timeout in seconds for remote/CLI rendering operations")
 		verbose    = flag.Bool("v", false, "Enable verbose SRE logging (diagnostics, fallback reasons, duration)")
 		forceTTY   = flag.Bool("force-tty", false, "Force treating output as an interactive TTY")
+		scale      = flag.Float64("scale", 1.0, "Rasterization scale factor for image rendering (e.g. 1.0, 2.0 for Retina/HiDPI)")
 	)
 
 	flag.Usage = func() {
@@ -93,16 +102,27 @@ func main() {
 		}
 	}
 
+	if *noColor {
+		_ = os.Setenv("NO_COLOR", "1")
+	}
+
 	// Build printer
 	printer := mermaid.New(
 		mermaid.WithMode(mode),
 		mermaid.WithWidth(*width),
 		mermaid.WithHeight(*height),
 		mermaid.WithTheme(*theme),
+		mermaid.WithColumns(*columns),
+		mermaid.WithPadding(*paddingX, *paddingY),
+		mermaid.WithSharpEdges(*sharp),
+		mermaid.WithHyperlinks(*hyperlinks),
+		mermaid.WithBoxFrame(*frame),
+		mermaid.WithTitle(*title),
 		mermaid.WithTimeout(timeout),
+		mermaid.WithScale(*scale),
 		mermaid.WithForceTTY(*forceTTY),
 		mermaid.WithOnFallback(fallbackHook),
-		mermaid.WithImageRenderer(mermaid.NewResilientImageRenderer(*krokiURL, timeout)),
+		mermaid.WithImageRenderer(mermaid.NewResilientImageRendererWithScale(*krokiURL, timeout, *scale)),
 	)
 
 	if *verbose {

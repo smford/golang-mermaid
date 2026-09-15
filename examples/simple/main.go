@@ -22,10 +22,13 @@ func main() {
 		log.Printf("[Observability] Fallback triggered: %s", reason)
 	}
 
-	// Create a printer with auto-detection and fallback monitoring
+	// Create a printer with auto-detection, ANSI color themes, styling and fallback monitoring
 	printer := mermaid.New(
 		mermaid.WithMode(mermaid.ModeAuto),
 		mermaid.WithWidth("80%"),
+		mermaid.WithTheme("default"),
+		mermaid.WithBoxFrame(true),
+		mermaid.WithTitle("Mermaid Architecture Diagram"),
 		mermaid.WithOnFallback(fallbackHook),
 	)
 

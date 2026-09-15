@@ -60,6 +60,10 @@ type Config struct {
 	// PreserveAspectRatio determines whether aspect ratio is preserved in iTerm2.
 	PreserveAspectRatio bool
 
+	// Scale specifies the rasterization scale factor for image rendering (e.g. 1.0, 2.0 for Retina/HiDPI).
+	// Default is 1.0.
+	Scale float64
+
 	// AllowCompatibleTerminals allows terminals that support iTerm2 OSC 1337
 	// (such as WezTerm, Ghostty, and mintty) to render images in ModeAuto.
 	// Default is true.
@@ -75,8 +79,30 @@ type Config struct {
 	// Default is 10 seconds.
 	Timeout time.Duration
 
-	// Theme specifies diagram color/theme if supported by the renderer (e.g. "default", "dark", "forest").
+	// Theme specifies diagram color/theme if supported by the renderer (e.g. "default", "dark", "slate", "blueprint", "neon").
 	Theme string
+
+	// Columns specifies the character column width for text diagram layout.
+	// When <= 0, automatically detects terminal width or uses a generous 120 default.
+	Columns int
+
+	// PaddingX specifies horizontal padding inside node boxes.
+	PaddingX int
+
+	// PaddingY specifies vertical padding inside node boxes.
+	PaddingY int
+
+	// SharpEdges uses sharp corners (┌──┐) instead of rounded corners (╭──╮).
+	SharpEdges bool
+
+	// Hyperlinks enables OSC 8 clickable terminal hyperlinks for diagrams with click events.
+	Hyperlinks bool
+
+	// BoxFrame wraps the text diagram in an outer decorative card border.
+	BoxFrame bool
+
+	// Title is an optional title displayed in the diagram frame or header.
+	Title string
 
 	// ImageRenderer is the backend used to generate image bytes from Mermaid syntax.
 	ImageRenderer ImageRenderer
@@ -102,11 +128,19 @@ func DefaultConfig() Config {
 		Width:                    "auto",
 		Height:                   "auto",
 		PreserveAspectRatio:      true,
+		Scale:                    1.0,
 		AllowCompatibleTerminals: true,
 		DisableFallback:          false,
 		ForceTTY:                 false,
 		Timeout:                  10 * time.Second,
 		Theme:                    "default",
+		Columns:                  0, // Auto-detect
+		PaddingX:                 1,
+		PaddingY:                 0,
+		SharpEdges:               false,
+		Hyperlinks:               false,
+		BoxFrame:                 false,
+		Title:                    "",
 		TerminalEnv:              DefaultTerminalEnv,
 	}
 }
@@ -145,6 +179,15 @@ func WithHeight(height string) Option {
 func WithPreserveAspectRatio(preserve bool) Option {
 	return func(c *Config) {
 		c.PreserveAspectRatio = preserve
+	}
+}
+
+// WithScale sets the image rasterization scale factor (e.g. 1.0, 2.0 for Retina/HiDPI displays).
+func WithScale(scale float64) Option {
+	return func(c *Config) {
+		if scale > 0 {
+			c.Scale = scale
+		}
 	}
 }
 
@@ -215,3 +258,48 @@ func WithTerminalEnv(env TerminalEnv) Option {
 		}
 	}
 }
+
+// WithColumns sets the column width for text/ASCII diagram layout.
+// If <= 0, terminal width is auto-detected.
+func WithColumns(cols int) Option {
+	return func(c *Config) {
+		c.Columns = cols
+	}
+}
+
+// WithPadding sets horizontal (x) and vertical (y) padding inside node boxes.
+func WithPadding(x, y int) Option {
+	return func(c *Config) {
+		c.PaddingX = x
+		c.PaddingY = y
+	}
+}
+
+// WithSharpEdges enables sharp box corners (┌──┐) instead of rounded corners (╭──╮).
+func WithSharpEdges(sharp bool) Option {
+	return func(c *Config) {
+		c.SharpEdges = sharp
+	}
+}
+
+// WithHyperlinks enables OSC 8 clickable hyperlinks in terminal text output.
+func WithHyperlinks(hyperlinks bool) Option {
+	return func(c *Config) {
+		c.Hyperlinks = hyperlinks
+	}
+}
+
+// WithBoxFrame wraps the rendered text diagram in a stylish card frame.
+func WithBoxFrame(frame bool) Option {
+	return func(c *Config) {
+		c.BoxFrame = frame
+	}
+}
+
+// WithTitle sets an optional diagram title displayed in terminal headers or box frames.
+func WithTitle(title string) Option {
+	return func(c *Config) {
+		c.Title = title
+	}
+}
+

@@ -178,6 +178,7 @@ func (m *MermaidInkRenderer) RenderImage(ctx context.Context, mermaidSource stri
 type LocalCLIRenderer struct {
 	BinaryPath string
 	Theme      string
+	Scale      float64
 }
 
 // NewLocalCLIRenderer returns a LocalCLIRenderer using the specified mmdc binary path.
@@ -193,6 +194,7 @@ func NewLocalCLIRenderer(binaryPath, theme string) (*LocalCLIRenderer, error) {
 	return &LocalCLIRenderer{
 		BinaryPath: binaryPath,
 		Theme:      theme,
+		Scale:      1.0,
 	}, nil
 }
 
@@ -220,6 +222,9 @@ func (c *LocalCLIRenderer) RenderImage(ctx context.Context, mermaidSource string
 	if c.Theme != "" && c.Theme != "default" {
 		args = append(args, "-t", c.Theme)
 	}
+	if c.Scale > 0 && c.Scale != 1.0 {
+		args = append(args, "-s", fmt.Sprintf("%g", c.Scale))
+	}
 
 	cmd := exec.CommandContext(ctx, c.BinaryPath, args...)
 	output, err := cmd.CombinedOutput()
@@ -246,10 +251,18 @@ type ResilientImageRenderer struct {
 // 2. Kroki HTTP API (fast, reliable diagram service)
 // 3. Mermaid.ink HTTP API (secondary fallback)
 func NewResilientImageRenderer(krokiBaseURL string, timeout time.Duration) *ResilientImageRenderer {
+	return NewResilientImageRendererWithScale(krokiBaseURL, timeout, 1.0)
+}
+
+// NewResilientImageRendererWithScale creates a composite renderer with a specific rasterization scale factor.
+func NewResilientImageRendererWithScale(krokiBaseURL string, timeout time.Duration, scale float64) *ResilientImageRenderer {
 	var renderers []ImageRenderer
 
 	// Try local mmdc first if installed on the system
 	if cli, err := NewLocalCLIRenderer("", "default"); err == nil {
+		if scale > 0 {
+			cli.Scale = scale
+		}
 		renderers = append(renderers, cli)
 	}
 

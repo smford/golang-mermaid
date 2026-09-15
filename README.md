@@ -147,9 +147,17 @@ err := printer.PrintFile("testdata/incident_response.mmd")
 | Option | Description | Default |
 | :--- | :--- | :--- |
 | `WithMode(mode)` | Set render mode (`ModeAuto`, `ModeImage`, `ModeASCII`, `ModeUnicode`) | `ModeAuto` |
+| `WithTheme(theme)` | Text/ASCII theme (`"default"`, `"slate"`, `"blueprint"`, `"neon"`, `"amber"`, `"phosphor"`, `"monokai"`) | `"default"` |
+| `WithBoxFrame(bool)` | Wrap text/ASCII diagram in an elegant executive card border | `false` |
+| `WithTitle(title)` | Display a diagram title embedded in the card frame header | `""` |
+| `WithColumns(cols)` | Character columns for layout (0 auto-detects terminal width; defaults to 120) | `0` |
+| `WithPadding(x, y)` | Horizontal and vertical padding inside node boxes | `(1, 0)` |
+| `WithSharpEdges(bool)` | Use sharp box corners (`┌──┐`) instead of rounded (`╭──╮`) | `false` |
+| `WithHyperlinks(bool)` | Enable OSC 8 clickable terminal hyperlinks for diagrams with click events | `false` |
 | `WithWidth(width)` | Set display width in iTerm2 (`"auto"`, `"80%"`, `"800px"`, `"60cell"`) | `"auto"` |
 | `WithHeight(height)` | Set display height in iTerm2 (`"auto"`, `"400px"`, `"30cell"`) | `"auto"` |
 | `WithPreserveAspectRatio(bool)` | Maintain image aspect ratio in iTerm2 | `true` |
+| `WithScale(scale)` | Rasterization scale factor for HiDPI/Retina display (`1.0`, `2.0`, `3.0`) | `1.0` |
 | `WithTimeout(duration)` | Maximum time budget for rendering requests | `10s` |
 | `WithWriter(w)` | Destination `io.Writer` | `os.Stdout` |
 | `WithOnFallback(fn)` | Callback executed whenever fallback from image to text occurs | `nil` |

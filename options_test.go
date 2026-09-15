@@ -22,6 +22,13 @@ func TestOptions(t *testing.T) {
 		WithForceTTY(true),
 		WithTimeout(5 * time.Second),
 		WithTheme("forest"),
+		WithColumns(130),
+		WithPadding(2, 1),
+		WithSharpEdges(true),
+		WithHyperlinks(true),
+		WithBoxFrame(true),
+		WithTitle("Sample System"),
+		WithScale(2.5),
 		WithOnFallback(func(reason string, err error) {
 			fallbackTriggered = true
 		}),
@@ -60,6 +67,27 @@ func TestOptions(t *testing.T) {
 	}
 	if cfg.Theme != "forest" {
 		t.Errorf("expected theme forest, got %s", cfg.Theme)
+	}
+	if cfg.Columns != 130 {
+		t.Errorf("expected columns 130, got %d", cfg.Columns)
+	}
+	if cfg.PaddingX != 2 || cfg.PaddingY != 1 {
+		t.Errorf("expected padding (2, 1), got (%d, %d)", cfg.PaddingX, cfg.PaddingY)
+	}
+	if !cfg.SharpEdges {
+		t.Errorf("expected sharpEdges true")
+	}
+	if !cfg.Hyperlinks {
+		t.Errorf("expected hyperlinks true")
+	}
+	if !cfg.BoxFrame {
+		t.Errorf("expected boxFrame true")
+	}
+	if cfg.Title != "Sample System" {
+		t.Errorf("expected title 'Sample System', got %q", cfg.Title)
+	}
+	if cfg.Scale != 2.5 {
+		t.Errorf("expected scale 2.5, got %v", cfg.Scale)
 	}
 	if cfg.OnFallback != nil {
 		cfg.OnFallback("test", nil)
