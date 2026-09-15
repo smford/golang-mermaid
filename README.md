@@ -5,7 +5,6 @@
 [![CI](https://github.com/smford/golang-mermaid/actions/workflows/ci.yml/badge.svg)](https://github.com/smford/golang-mermaid/actions/workflows/ci.yml)
 [![golangci-lint](https://img.shields.io/badge/golangci--lint-v1.64.6-blue?logo=go)](.golangci.yml)
 [![Dependabot](https://img.shields.io/badge/dependabot-active-blue?logo=dependabot)](.github/dependabot.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/smford/golang-mermaid)](https://goreportcard.com/report/github.com/smford/golang-mermaid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **`golang-mermaid`** is a production-grade Go module designed to render and display Mermaid diagrams directly inside modern terminals using native high-resolution graphics protocols with automated ASCII/Unicode fallback.
