@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	_ "image/gif"
-	_ "image/jpeg"
-	_ "image/png"
+	_ "image/gif"  // register GIF decoder for image conversion
+	_ "image/jpeg" // register JPEG decoder for image conversion
+	_ "image/png"  // register PNG decoder for image conversion
 	"strings"
 )
 
@@ -39,7 +39,7 @@ func EncodeSixel(img image.Image, tmuxPassthrough bool) (string, error) {
 			r, g, b, a := img.At(x, y).RGBA()
 			if a < 128 {
 				// Treat transparent background as white
-				r, g, b, a = 0xffff, 0xffff, 0xffff, 0xffff
+				r, g, b = 0xffff, 0xffff, 0xffff
 			}
 			c := color.RGBA{
 				R: uint8(r >> 8),
@@ -144,7 +144,7 @@ func EncodeSixel(img image.Image, tmuxPassthrough bool) (string, error) {
 						}
 					}
 				}
-				sixelChar := byte(63 + sixBits)
+				sixelChar := 63 + sixBits
 				if runLen > 0 && sixelChar == runChar {
 					runLen++
 				} else {

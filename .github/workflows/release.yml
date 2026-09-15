@@ -183,6 +183,11 @@ jobs:
       - name: Run go vet
         run: go vet ./...
 
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.6
+
       - name: Run Tests with Race Detector
         run: go test -v -count=1 -race ./...
 

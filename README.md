@@ -3,6 +3,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/smford/golang-mermaid.svg)](https://pkg.go.dev/github.com/smford/golang-mermaid)
 [![Release](https://img.shields.io/github/v/release/smford/golang-mermaid?color=blue&logo=github)](https://github.com/smford/golang-mermaid/releases)
 [![CI](https://github.com/smford/golang-mermaid/actions/workflows/ci.yml/badge.svg)](https://github.com/smford/golang-mermaid/actions/workflows/ci.yml)
+[![golangci-lint](https://img.shields.io/badge/golangci--lint-v1.64.6-blue?logo=go)](.golangci.yml)
 [![Dependabot](https://img.shields.io/badge/dependabot-active-blue?logo=dependabot)](.github/dependabot.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/smford/golang-mermaid)](https://goreportcard.com/report/github.com/smford/golang-mermaid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -420,15 +421,19 @@ mermaid_render_duration_seconds_total 0.042180
 
 ---
 
-## Testing
+## Testing & Code Quality
 
 Run the test suite with the Go race detector:
-
 ```bash
 go test -v -race ./...
 ```
 
-All unit tests and diagram validation tests run with 100% pass rate.
+Run static analysis with `golangci-lint`:
+```bash
+golangci-lint run ./...
+```
+
+All unit tests, race detector checks, and linter rules run with 100% pass rate.
 
 ---
 

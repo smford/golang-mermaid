@@ -109,6 +109,7 @@ func (k *KrokiRenderer) RenderImage(ctx context.Context, mermaidSource string) (
 }
 
 // MermaidInkRenderer renders Mermaid diagrams using the mermaid.ink public service.
+//nolint:revive // type name retains mermaid.ink service reference for clarity
 type MermaidInkRenderer struct {
 	BaseURL    string
 	HTTPClient *http.Client

@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	_ "image/jpeg"
-	_ "image/png"
+	_ "image/jpeg" // register JPEG decoder for raster fallback
+	_ "image/png"  // register PNG decoder for raster fallback
 	"os"
 	"regexp"
 	"strconv"
@@ -400,7 +400,7 @@ func ImageToASCII(img image.Image, targetWidth int) string {
 			c := img.At(origX, origY)
 			gray := color.GrayModel.Convert(c).(color.Gray)
 
-			idx := int((255 - int(gray.Y)) * (rampLen - 1) / 255)
+			idx := ((255 - int(gray.Y)) * (rampLen - 1)) / 255
 			if idx < 0 {
 				idx = 0
 			}
