@@ -63,11 +63,17 @@ flowchart TD
 ### Key Engineering Highlights
 
 - **Zero-Panic Resiliency**: Strict error propagation; never panics on malformed syntax or terminal anomalies.
+- **Multi-Protocol Graphics**: Native pure-Go implementations of Kitty (`\033_G`), iTerm2 (`OSC 1337`), and DEC Sixel (`\033Pq`) graphics protocols.
 - **Cascading Fallback**: Automatically cascades through local CLI (`mmdc`), remote REST services (Kroki, Mermaid.ink), and local pure-Go layout engines (`mmaid-go`).
-- **Deadline & Timeout Budgets**: All network operations respect `context.Context` deadlines. The multi-backend image renderer automatically budgets time slices across candidates to prevent one sluggish service from exhausting the entire deadline.
-- **SRE Observability Hooks**: Register custom `OnFallback` callbacks to log warnings, emit Prometheus metrics, or track terminal degradation across developer fleets.
-- **TTY & Pipe Safety**: Employs interactive terminal checks via `golang.org/x/term` so that binary escape sequences are never accidentally spewed into redirected log files or shell pipes unless explicitly forced.
-- **Tmux Passthrough**: Automatically detects tmux sessions and wraps escape sequences with DCS passthrough (`\033Ptmux;...\033\\`).
+- **Content-Addressed Caching**: Disk (`~/.cache/golang-mermaid`) and in-memory caches indexed by SHA-256 hashes of diagram source and configuration.
+- **Air-Gapped & Offline Mode**: Enforces zero external HTTP calls with immediate fallback to local binaries or Unicode text art.
+- **Markdown Runbook Extractor**: Automatically parses Markdown operational documents and replaces ` ```mermaid ` blocks inline with rendered terminal output.
+- **In-Band PTY Probing**: Probes terminal graphics capabilities via Primary Device Attributes (`\033[c`) for remote SSH environments.
+- **Interactive 2D Pan & Zoom Pager**: Fullscreen alternate buffer navigation with vi keys (`hjkl`), arrow keys, and page scrolling.
+- **Production Telemetry & Metrics**: Structured events, thread-safe stats accumulator, and Prometheus exposition metrics format.
+- **Deadline & Timeout Budgets**: All network operations respect `context.Context` deadlines.
+- **TTY & Pipe Safety**: Interactive terminal detection protects pipes and redirected log files from binary escape sequences.
+- **Tmux Passthrough**: Automatically wraps escape sequences inside tmux DCS passthrough (`\033Ptmux;...\033\\`).
 
 ---
 
@@ -234,42 +240,54 @@ go run examples/simple/main.go testdata/architecture.mmd
 Build and run the full-featured CLI:
 
 ```bash
-# Build
+# Build binary
 go build -o bin/mermaid-term cmd/mermaid-term/main.go
 
-# Auto-detect (iTerm2 image or ASCII)
+# 1. Auto-detect graphics protocol (Kitty, iTerm2, Sixel, or ASCII fallback)
 ./bin/mermaid-term testdata/architecture.mmd
 
-# Force ASCII mode
-./bin/mermaid-term -mode=ascii testdata/incident_response.mmd
+# 2. Select explicit graphics protocol
+./bin/mermaid-term -protocol=kitty testdata/sequence_auth.mmd
+./bin/mermaid-term -protocol=sixel testdata/state_machine.mmd
 
-# Force Unicode mode
-./bin/mermaid-term -mode=unicode testdata/sequence_auth.mmd
+# 3. Interactive 2D pan & zoom terminal pager (arrow keys / hjkl / q)
+./bin/mermaid-term -interactive testdata/architecture.mmd
 
-# Render an entire Markdown runbook with embedded diagrams inline
+# 4. In-band PTY capability probing (\033[c) for SSH environments
+./bin/mermaid-term -probe testdata/architecture.mmd
+
+# 5. Render an entire Markdown runbook with embedded diagrams inline
 ./bin/mermaid-term testdata/runbook.md
 
-# Air-gapped / offline mode
+# 6. Air-gapped / offline mode (zero remote HTTP network requests)
 ./bin/mermaid-term -offline testdata/architecture.mmd
 
-# Enable verbose SRE diagnostic logs
-./bin/mermaid-term -v testdata/state_machine.mmd
+# 7. Export Prometheus SRE metrics on exit
+./bin/mermaid-term -metrics testdata/architecture.mmd
 
-# Read diagram from stdin
+# 8. Force ASCII / Unicode mode with card frame styling
+./bin/mermaid-term -mode=ascii -frame -title="Incident Triage" testdata/incident_response.mmd
+./bin/mermaid-term -mode=unicode -frame -theme=slate testdata/state_machine.mmd
+
+# 9. Clear cache
+./bin/mermaid-term -clear-cache
+
+# 10. Read diagram from stdin
 cat testdata/database_er.mmd | ./bin/mermaid-term
 ```
 
 ---
 
-## Test Diagrams Included
+## Test Diagrams & Runbooks Included
 
-Five test diagrams are provided under [`testdata/`](testdata/):
+Six test fixtures are provided under [`testdata/`](testdata/):
 
 1. **`architecture.mmd`**: Microservices topology with CloudFront, ALB, VPC, Kafka, Redis, and PostgreSQL.
 2. **`incident_response.mmd`**: SRE incident response runbook and escalation flowchart.
 3. **`sequence_auth.mmd`**: Zero-trust authentication sequence with Okta SSO, WebAuthn MFA, and HashiCorp Vault.
 4. **`state_machine.mmd`**: Kubernetes Pod lifecycle state transitions (`CrashLoopBackOff`, `Running`, etc.).
 5. **`database_er.mmd`**: Relational data model for Service Level Objectives (SLOs) and incident tracking.
+6. **`runbook.md`**: Operations incident response document embedding Markdown text and live Mermaid diagrams.
 
 ---
 

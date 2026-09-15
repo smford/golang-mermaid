@@ -3,7 +3,7 @@
 // It targets modern terminal emulators by supporting multiple inline graphics protocols:
 //   - Kitty Graphics Protocol (APC \033_G) for Kitty, Ghostty, and WezTerm.
 //   - iTerm2 Inline Image Protocol (OSC 1337) for iTerm2, WezTerm, Ghostty, and Mintty.
-//   - DEC Sixel Bitmap Protocol (DCS \033Pq) for Foot, mlterm, and Sixel-enabled terminals.
+//   - DEC Sixel Bitmap Protocol (DCS \033Pq) for Foot, mlterm, Mintty, and Sixel-enabled terminals.
 //
 // When running in terminals that do not support graphics protocols, when output is piped
 // or redirected, or when image generation fails, the package gracefully degrades to rendering
@@ -16,13 +16,20 @@
 //   - Graceful Degradation: High-fidelity graphics are preferred in capable terminals,
 //     with seamless fallback to Unicode or 7-bit ASCII text diagrams when inline images
 //     are unavailable.
-//   - Context & Timeout Budgets: All rendering operations accept context.Context and
-//     enforce strict network/CLI timeouts to prevent hanging processes.
-//   - Zero Unhandled Failures: Fallback cascades from local binaries (mmdc) to remote
-//     HTTP renderers (Kroki, Mermaid.ink) to local pure-Go layout engines (mmaid-go),
-//     finally falling back to framed source code in extreme cases.
-//   - Observability: Diagnostic hooks (OnFallback) allow callers to log or emit metrics
-//     whenever fallbacks occur.
+//   - Multi-Protocol Graphics: Automatically negotiates Kitty APC, iTerm2 OSC, or DEC Sixel DCS
+//     with transparent tmux passthrough support.
+//   - Content-Addressed Caching: Thread-safe in-memory and atomic filesystem caching
+//     indexed by SHA-256 hashes of diagram source and render options.
+//   - Air-Gapped & Offline Operation: Explicit offline mode avoids external HTTP requests,
+//     leveraging local mmdc CLI if present or immediately falling back to Unicode text art.
+//   - Markdown Runbook Extraction: Parses Markdown operational documents, replacing
+//     embedded ```mermaid blocks inline with rendered terminal output while preserving text.
+//   - In-Band PTY Capability Probing: Sends Primary Device Attributes queries (\033[c)
+//     to identify terminal capabilities over SSH sessions where TERM_PROGRAM is stripped.
+//   - Interactive 2D Pan & Zoom Pager: Renders diagrams inside an alternate screen buffer
+//     with 2D navigation (arrow keys, vi keys hjkl, page jumps, reset, exit).
+//   - Production Telemetry & Observability: Built-in Prometheus metrics exposition,
+//     thread-safe stats accumulators, and SRE fallback hooks.
 //   - Safe I/O: Automatically detects interactive TTYs to prevent spewing binary escape
 //     codes into pipes or redirected log files.
 //
@@ -40,15 +47,30 @@
 //
 //	err := mermaid.PrintFile("architecture.mmd")
 //
-// Force ASCII mode:
+// Render with Content Caching and Telemetry:
 //
-//	err := mermaid.PrintFile("architecture.mmd", mermaid.WithMode(mermaid.ModeASCII))
-//
-// Custom Observability Hook:
-//
-//	err := mermaid.PrintFile("architecture.mmd",
-//	    mermaid.WithOnFallback(func(reason string, err error) {
-//	        log.Printf("[WARN] Degraded to ASCII diagram: %s", reason)
-//	    }),
+//	stats := mermaid.NewStatsRecorder()
+//	printer := mermaid.New(
+//	    mermaid.WithCache(true),
+//	    mermaid.WithTelemetry(stats),
 //	)
+//	err := printer.PrintFile("architecture.mmd")
+//	fmt.Println(stats.ExportPrometheus())
+//
+// Render Markdown Runbook:
+//
+//	printer := mermaid.New(mermaid.WithMode(mermaid.ModeAuto))
+//	err := printer.PrintMarkdownFile(context.Background(), "runbook.md")
+//
+// Interactive Pager for Large Diagrams:
+//
+//	err := mermaid.PrintFile("architecture.mmd", mermaid.WithInteractive(true))
+//
+// Air-Gapped / Offline Mode:
+//
+//	err := mermaid.PrintFile("architecture.mmd", mermaid.WithOffline(true))
+//
+// In-Band Terminal Probing (SSH):
+//
+//	err := mermaid.PrintFile("architecture.mmd", mermaid.WithTerminalProbe(true))
 package mermaid

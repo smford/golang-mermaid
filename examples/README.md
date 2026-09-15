@@ -1,6 +1,6 @@
 # Examples & Test Diagrams
 
-This directory provides working examples and test Mermaid diagram files designed to demonstrate and validate the functionality of `golang-mermaid`.
+This directory provides working examples, production CLI usage patterns, and test Mermaid diagrams designed to demonstrate and validate the full functionality of `golang-mermaid`.
 
 ---
 
@@ -8,20 +8,26 @@ This directory provides working examples and test Mermaid diagram files designed
 
 Location: [`examples/simple/main.go`](simple/main.go)
 
-A minimal, clean Go application demonstrating:
-- Reading a `.mmd` file from disk (or accepting a file argument via CLI).
-- Initializing `mermaid.Printer` with `ModeAuto`.
-- Registering an SRE observability fallback callback.
-- Printing directly to the terminal with iTerm2 inline image support and automatic ASCII fallback.
+A complete Go application demonstrating senior developer and SRE practices:
+- Reading either standard `.mmd` diagram files or Markdown documents (`.md`).
+- Multi-protocol graphics auto-detection (Kitty, iTerm2, Sixel) with graceful ASCII fallback.
+- Content-addressed disk and memory caching (`WithCache(true)`).
+- In-band PTY capability probing for remote SSH sessions (`WithTerminalProbe(true)`).
+- SRE observability fallback callbacks (`WithOnFallback`).
+- Built-in performance and operational metrics recording (`WithTelemetry(stats)`).
+- Printing an execution telemetry summary on exit.
 
 ### Running the Simple Example
 
 ```bash
-# Run with the default architecture diagram:
+# Run with the default cloud architecture diagram:
 go run examples/simple/main.go
 
-# Or provide a custom diagram file:
+# Run with an incident response flowchart:
 go run examples/simple/main.go testdata/incident_response.mmd
+
+# Run with an incident response Markdown runbook (renders embedded diagrams inline):
+go run examples/simple/main.go testdata/runbook.md
 ```
 
 ---
@@ -30,43 +36,86 @@ go run examples/simple/main.go testdata/incident_response.mmd
 
 Location: [`cmd/mermaid-term/main.go`](../cmd/mermaid-term/main.go)
 
-A full-featured command-line utility for developers and SREs with flags for mode selection, dimensions, themes, custom endpoints, and verbose diagnostic logs.
+A full-featured command-line utility for engineers and SREs.
 
-### Installing and Running
+### Installing & Building
 
 ```bash
-# Build the binary:
+# Build binary into bin/
 go build -o bin/mermaid-term cmd/mermaid-term/main.go
+```
 
-# Render automatically (iTerm2 image when supported, ASCII otherwise):
+### CLI Flag Reference
+
+| Flag | Type | Description | Default |
+| :--- | :--- | :--- | :--- |
+| `-file` | string | Path to `.mmd`, `.mermaid`, or `.md` file (or provide as first positional argument) | `""` (stdin) |
+| `-mode` | string | Rendering mode: `auto`, `image`, `ascii`, or `unicode` | `auto` |
+| `-protocol` | string | Terminal graphics protocol: `auto`, `kitty`, `iterm2`, `sixel`, `none` | `auto` |
+| `-probe` | bool | Query terminal capabilities in-band via PTY escapes (`\033[c`) for SSH | `false` |
+| `-interactive` | bool | Launch interactive 2D pan & zoom terminal pager for large diagrams | `false` |
+| `-cache` | bool | Enable content-addressed disk caching | `true` |
+| `-cache-dir` | string | Custom disk cache directory | `~/.cache/golang-mermaid` |
+| `-cache-ttl` | duration | Time-to-live for cached diagram renders (e.g. `24h`, `30m`) | `24h` |
+| `-clear-cache` | bool | Clear cached diagrams and exit | `false` |
+| `-offline` | bool | Air-gapped mode: disable all remote HTTP calls (uses local `mmdc` or text) | `false` |
+| `-markdown` | bool | Parse Markdown document and render embedded ` ```mermaid ` blocks inline | `false` (auto if `.md`) |
+| `-metrics` | bool | Export Prometheus-compatible telemetry metrics to `stderr` on exit | `false` |
+| `-width` | string | Image display width (e.g. `80%`, `800px`, `60cell`) | `auto` |
+| `-height` | string | Image display height (e.g. `400px`, `30cell`) | `auto` |
+| `-scale` | float | Rasterization scale factor for HiDPI/Retina screens (`1.0`, `2.0`, `3.0`) | `1.0` |
+| `-theme` | string | Text/ASCII diagram theme (`default`, `slate`, `blueprint`, `neon`, `amber`, `monokai`)| `default` |
+| `-frame` | bool | Wrap text/ASCII diagram in an executive card border | `false` |
+| `-title` | string | Header title for executive card border | `""` |
+| `-columns` | int | Column width override for text diagram layout (0 for auto-detection) | `0` |
+| `-v` | bool | Verbose SRE diagnostic logs (mode, protocol, duration, fallback reason) | `false` |
+
+### CLI Usage Examples
+
+```bash
+# 1. Automatic protocol detection (Kitty, iTerm2, Sixel, or ASCII):
 ./bin/mermaid-term testdata/architecture.mmd
 
-# Render with modern dark slate theme and executive card frame:
-./bin/mermaid-term -frame -title="Microservices Architecture" -theme=slate testdata/architecture.mmd
+# 2. Specific graphics protocol selection:
+./bin/mermaid-term -protocol=kitty testdata/sequence_auth.mmd
+./bin/mermaid-term -protocol=sixel testdata/state_machine.mmd
 
-# Force ASCII mode:
-./bin/mermaid-term -mode=ascii testdata/incident_response.mmd
+# 3. Interactive 2D pan & zoom pager (navigate with arrow keys or hjkl, q to exit):
+./bin/mermaid-term -interactive testdata/architecture.mmd
 
-# Force Unicode box-drawing mode with card frame:
-./bin/mermaid-term -mode=unicode -frame -title="Zero-Trust Authentication" testdata/sequence_auth.mmd
+# 4. In-band PTY probing for SSH sessions:
+./bin/mermaid-term -probe testdata/architecture.mmd
 
-# Render with custom column width and verbose SRE diagnostics:
-./bin/mermaid-term -columns=130 -v testdata/state_machine.mmd
+# 5. Render a full Markdown runbook replacing ```mermaid blocks inline:
+./bin/mermaid-term testdata/runbook.md
 
-# Pipe diagram directly from stdin:
+# 6. Air-gapped / offline mode (zero remote HTTP network requests):
+./bin/mermaid-term -offline testdata/architecture.mmd
+
+# 7. SRE Prometheus telemetry metrics exported to stderr:
+./bin/mermaid-term -metrics testdata/architecture.mmd
+
+# 8. Force ASCII mode with dark slate styling and card framing:
+./bin/mermaid-term -mode=ascii -frame -title="Incident Triage Flow" -theme=slate testdata/incident_response.mmd
+
+# 9. Clear cache:
+./bin/mermaid-term -clear-cache
+
+# 10. Pipe diagram directly from stdin:
 cat testdata/database_er.mmd | ./bin/mermaid-term
 ```
 
 ---
 
-## 3. Test Mermaid Diagrams
+## 3. Test Mermaid Diagrams & Runbooks
 
-The [`testdata/`](../testdata/) directory contains 5 realistic Mermaid diagrams modeling real-world Site Reliability Engineering and software architecture scenarios:
+The [`testdata/`](../testdata/) directory contains realistic diagrams and runbooks modeling real-world Site Reliability Engineering scenarios:
 
-| Diagram File | Type | Description |
+| File | Type | Description |
 | :--- | :--- | :--- |
-| [`architecture.mmd`](../testdata/architecture.mmd) | **Flowchart** (`graph TD`) | Production cloud architecture featuring CloudFront CDN, ALB, microservices within a Kubernetes VPC, Kafka event bus, Redis cache, PostgreSQL, and external third-party APIs. |
-| [`incident_response.mmd`](../testdata/incident_response.mmd) | **Flowchart** (`flowchart TD`) | SRE Incident triage decision tree covering alert ingestion, PagerDuty escalation, severity triage (P1/P2/P3), war rooms, runbook execution, verification, and blameless postmortems. |
+| [`architecture.mmd`](../testdata/architecture.mmd) | **Flowchart** (`graph TD`) | Production cloud architecture: CloudFront CDN, ALB, microservices within a Kubernetes VPC, Kafka event bus, Redis cache, PostgreSQL, and third-party APIs. |
+| [`incident_response.mmd`](../testdata/incident_response.mmd) | **Flowchart** (`flowchart TD`) | SRE incident triage decision tree covering alert ingestion, PagerDuty escalation, severity triage (P1/P2/P3), war rooms, runbook execution, verification, and blameless postmortems. |
 | [`sequence_auth.mmd`](../testdata/sequence_auth.mmd) | **Sequence** (`sequenceDiagram`) | Production zero-trust engineer authentication flow: OIDC SSO, WebAuthn MFA, short-lived client certificate issuance via HashiCorp Vault, and Kubernetes API access. |
 | [`state_machine.mmd`](../testdata/state_machine.mmd) | **State** (`stateDiagram-v2`) | Kubernetes Pod lifecycle state transitions: `Pending`, `ContainerCreating`, `Running`, `CrashLoopBackOff`, `Terminating`, `Succeeded`, and `Failed`. |
 | [`database_er.mmd`](../testdata/database_er.mmd) | **Entity Relationship** (`erDiagram`) | Relational data model connecting Services, Service Level Objectives (SLOs), SLI metrics, and SRE incident assignments. |
+| [`runbook.md`](../testdata/runbook.md) | **Markdown Runbook** (`.md`) | Incident response operations document embedding Markdown text, bash commands, and live Mermaid diagrams rendered inline. |
