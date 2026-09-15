@@ -15,10 +15,14 @@ type RenderResult struct {
 	// Mode is the actual render mode used (e.g. ModeImage, ModeUnicode, ModeASCII).
 	Mode RenderMode
 
+	// Protocol is the terminal graphics protocol used when Mode is ModeImage
+	// (ProtocolKitty, ProtocolITerm2, ProtocolSixel).
+	Protocol GraphicsProtocol
+
 	// ImageData contains raw image bytes (PNG) if image rendering was performed.
 	ImageData []byte
 
-	// Output is the formatted terminal payload (either OSC 1337 escape sequence or text art).
+	// Output is the formatted terminal payload (either escape sequence or text art).
 	Output string
 
 	// FallbackOccurred reports whether a fallback from image to text was triggered.
@@ -120,19 +124,52 @@ func (p *Printer) Render(ctx context.Context, mermaidSource string) (*RenderResu
 	targetMode := p.config.Mode
 	var fallbackReason string
 	fallbackOccurred := false
+	var activeProto GraphicsProtocol
 
-	// Determine if image rendering should be attempted
+	// Determine graphics protocol and whether image rendering should be attempted
 	shouldAttemptImage := false
 	switch targetMode {
 	case ModeImage:
-		shouldAttemptImage = true
+		if p.config.GraphicsProtocol == ProtocolAuto {
+			detected := DetectGraphicsProtocol(p.config.TerminalEnv, p.config.AllowCompatibleTerminals)
+			if detected != ProtocolNone {
+				activeProto = detected
+			} else {
+				activeProto = ProtocolITerm2 // default protocol for forced image mode
+			}
+		} else {
+			activeProto = p.config.GraphicsProtocol
+		}
+
+		if activeProto == ProtocolNone {
+			if p.config.DisableFallback {
+				return nil, fmt.Errorf("cannot render image: graphics protocol is set to none")
+			}
+			fallbackReason = "graphics protocol is set to none"
+			fallbackOccurred = true
+			targetMode = ModeUnicode
+		} else {
+			shouldAttemptImage = true
+		}
+
 	case ModeAuto:
-		// Check terminal capability
-		supported := SupportsITerm2ImagesEnv(p.config.TerminalEnv, p.config.AllowCompatibleTerminals)
+		if p.config.GraphicsProtocol == ProtocolAuto {
+			activeProto = DetectGraphicsProtocol(p.config.TerminalEnv, p.config.AllowCompatibleTerminals)
+		} else {
+			activeProto = p.config.GraphicsProtocol
+		}
+
+		supported := activeProto != ProtocolNone
+		if p.config.GraphicsProtocol != ProtocolAuto && activeProto != ProtocolNone {
+			supported = SupportsGraphicsProtocol(p.config.TerminalEnv, activeProto, p.config.AllowCompatibleTerminals)
+		}
 		isTTY := p.config.ForceTTY || IsTerminal(p.config.Writer)
 
 		if !supported {
-			fallbackReason = "terminal does not support iTerm2 inline images"
+			fallbackReason = "terminal does not support iTerm2, Kitty, or Sixel graphics protocols"
+			if p.config.GraphicsProtocol != ProtocolAuto {
+				fallbackReason = fmt.Sprintf("terminal does not support requested protocol %q", activeProto)
+			}
 			fallbackOccurred = true
 			targetMode = ModeUnicode
 		} else if !isTTY {
@@ -142,6 +179,7 @@ func (p *Printer) Render(ctx context.Context, mermaidSource string) (*RenderResu
 		} else {
 			shouldAttemptImage = true
 		}
+
 	case ModeASCII, ModeUnicode:
 		shouldAttemptImage = false
 	}
@@ -161,11 +199,6 @@ func (p *Printer) Render(ctx context.Context, mermaidSource string) (*RenderResu
 		}
 	}
 
-	// Notify SRE observability hook if fallback occurred
-	if fallbackOccurred && p.config.OnFallback != nil {
-		p.config.OnFallback(fallbackReason, nil)
-	}
-
 	// Render Image output
 	if targetMode == ModeImage || (shouldAttemptImage && !fallbackOccurred) {
 		fmtOpts := ImageFormatOptions{
@@ -176,14 +209,29 @@ func (p *Printer) Render(ctx context.Context, mermaidSource string) (*RenderResu
 			TmuxPassthrough:     IsTmuxEnv(p.config.TerminalEnv),
 		}
 
-		output := FormatITerm2Image(imgData, fmtOpts)
-		return &RenderResult{
-			Mode:             ModeImage,
-			ImageData:        imgData,
-			Output:           output,
-			FallbackOccurred: false,
-			Duration:         time.Since(start),
-		}, nil
+		output, err := FormatTerminalImage(activeProto, imgData, fmtOpts)
+		if err != nil {
+			if p.config.DisableFallback {
+				return nil, fmt.Errorf("terminal image formatting failed: %w", err)
+			}
+			fallbackReason = fmt.Sprintf("terminal image formatting failed: %v", err)
+			fallbackOccurred = true
+			targetMode = ModeUnicode
+		} else {
+			return &RenderResult{
+				Mode:             ModeImage,
+				Protocol:         activeProto,
+				ImageData:        imgData,
+				Output:           output,
+				FallbackOccurred: false,
+				Duration:         time.Since(start),
+			}, nil
+		}
+	}
+
+	// Notify SRE observability hook if fallback occurred
+	if fallbackOccurred && p.config.OnFallback != nil {
+		p.config.OnFallback(fallbackReason, nil)
 	}
 
 	// Render Text / ASCII output

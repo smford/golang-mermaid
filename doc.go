@@ -1,10 +1,13 @@
 // Package mermaid provides resilient, terminal-native rendering for Mermaid diagrams.
 //
-// It natively targets iTerm2 terminals by leveraging the iTerm2 inline image display
-// protocol (OSC 1337). When running in terminals that do not support inline images,
-// when output is piped or redirected, or when image generation fails, the package
-// gracefully degrades to rendering clean, high-fidelity ASCII or Unicode box-drawing
-// diagrams directly in the console.
+// It targets modern terminal emulators by supporting multiple inline graphics protocols:
+//   - Kitty Graphics Protocol (APC \033_G) for Kitty, Ghostty, and WezTerm.
+//   - iTerm2 Inline Image Protocol (OSC 1337) for iTerm2, WezTerm, Ghostty, and Mintty.
+//   - DEC Sixel Bitmap Protocol (DCS \033Pq) for Foot, mlterm, and Sixel-enabled terminals.
+//
+// When running in terminals that do not support graphics protocols, when output is piped
+// or redirected, or when image generation fails, the package gracefully degrades to rendering
+// clean, high-fidelity ASCII or Unicode box-drawing diagrams directly in the console.
 //
 // # Architecture and Reliability
 //

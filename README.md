@@ -4,9 +4,14 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/smford/golang-mermaid)](https://goreportcard.com/report/github.com/smford/golang-mermaid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**`golang-mermaid`** is a production-grade Go module designed to render and display Mermaid diagrams directly inside the terminal.
+**`golang-mermaid`** is a production-grade Go module designed to render and display Mermaid diagrams directly inside modern terminals using native high-resolution graphics protocols with automated ASCII/Unicode fallback.
 
-It leverages the **iTerm2 Inline Image Protocol (`OSC 1337`)** to render crisp, high-resolution graphical diagrams in iTerm2 and compatible modern terminal emulators. When running in a standard terminal (such as Apple Terminal, basic xterm, Linux TTY, or CI/CD pipelines), when output is piped to a file, or if image rendering services are unreachable, it **gracefully degrades** to clean, high-fidelity ASCII or Unicode box-drawing terminal art.
+It natively supports three major terminal graphics protocols:
+- **Kitty Graphics Protocol (`APC \033_G`)**: For Kitty, Ghostty, and WezTerm.
+- **iTerm2 Inline Image Protocol (`OSC 1337`)**: For iTerm2, WezTerm, Ghostty, and Mintty.
+- **DEC Sixel Bitmap Protocol (`DCS \033Pq`)**: For Foot, mlterm, Mintty, and Sixel-enabled terminals.
+
+When running in a standard terminal (such as Apple Terminal, Alacritty, Linux console, or CI/CD pipelines), when output is piped or redirected, or if image rendering services are unreachable, it **gracefully degrades** to clean, high-fidelity ASCII or Unicode box-drawing terminal art.
 
 ---
 
@@ -16,9 +21,9 @@ Engineered with **Site Reliability Engineering (SRE)** and senior development pr
 
 ```mermaid
 flowchart TD
-    Start[Input: Mermaid File or String] --> Detect{Detect Terminal & TTY}
+    Start[Input: Mermaid File or String] --> Detect{Detect Protocol & TTY}
     
-    Detect -- "iTerm2 / WezTerm & Interactive TTY" --> TryImage[Attempt Image Rendering]
+    Detect -- "Kitty / iTerm2 / Sixel & Interactive TTY" --> TryImage[Attempt Image Rendering]
     Detect -- "Standard Terminal / Pipe / File" --> FallbackTrigger[Trigger SRE Fallback Hook]
     
     subgraph ImagePipeline [Resilient Image Pipeline]
@@ -28,9 +33,15 @@ flowchart TD
         RemoteKroki -- Timeout / Error --> RemoteInk[GET via Mermaid.ink]
     end
     
-    ExecLocal -- Success --> FormatOSC[Format iTerm2 OSC 1337 Sequence]
-    RemoteKroki -- Success --> FormatOSC
-    RemoteInk -- Success --> FormatOSC
+    subgraph ProtocolDispatch [Terminal Protocol Formatter]
+        ExecLocal -- Image Bytes --> SelectProto{Selected Protocol}
+        RemoteKroki -- Image Bytes --> SelectProto
+        RemoteInk -- Image Bytes --> SelectProto
+        
+        SelectProto -- Kitty --> FormatKitty[Format Kitty APC Sequence \033_G]
+        SelectProto -- iTerm2 --> FormatITerm[Format iTerm2 OSC 1337 Sequence]
+        SelectProto -- Sixel --> FormatSixel[Format Pure-Go DEC Sixel DCS \033Pq]
+    end
     
     RemoteInk -- Failure / All Fail --> FallbackTrigger
     
@@ -41,7 +52,9 @@ flowchart TD
         RasterEngine -- Failure --> SourceFraming[Neatly Frame Raw Mermaid Source]
     end
     
-    FormatOSC --> Output[Terminal Output Stream]
+    FormatKitty --> Output[Terminal Output Stream]
+    FormatITerm --> Output
+    FormatSixel --> Output
     RenderUnicode --> Output
     RasterEngine --> Output
     SourceFraming --> Output
@@ -122,7 +135,10 @@ printer := mermaid.New(
     // Rendering mode: ModeAuto (default), ModeImage, ModeASCII, ModeUnicode
     mermaid.WithMode(mermaid.ModeAuto),
 
-    // iTerm2 display dimensions
+    // Terminal graphics protocol: ProtocolAuto (default), ProtocolKitty, ProtocolITerm2, ProtocolSixel, ProtocolNone
+    mermaid.WithGraphicsProtocol(mermaid.ProtocolAuto),
+
+    // Display dimensions (iTerm2 and Kitty)
     mermaid.WithWidth("80%"),
     mermaid.WithHeight("auto"),
     mermaid.WithPreserveAspectRatio(true),
@@ -147,6 +163,7 @@ err := printer.PrintFile("testdata/incident_response.mmd")
 | Option | Description | Default |
 | :--- | :--- | :--- |
 | `WithMode(mode)` | Set render mode (`ModeAuto`, `ModeImage`, `ModeASCII`, `ModeUnicode`) | `ModeAuto` |
+| `WithGraphicsProtocol(proto)` | Terminal graphics protocol (`ProtocolAuto`, `ProtocolKitty`, `ProtocolITerm2`, `ProtocolSixel`, `ProtocolNone`) | `ProtocolAuto` |
 | `WithTheme(theme)` | Text/ASCII theme (`"default"`, `"slate"`, `"blueprint"`, `"neon"`, `"amber"`, `"phosphor"`, `"monokai"`) | `"default"` |
 | `WithBoxFrame(bool)` | Wrap text/ASCII diagram in an elegant executive card border | `false` |
 | `WithTitle(title)` | Display a diagram title embedded in the card frame header | `""` |
@@ -154,14 +171,14 @@ err := printer.PrintFile("testdata/incident_response.mmd")
 | `WithPadding(x, y)` | Horizontal and vertical padding inside node boxes | `(1, 0)` |
 | `WithSharpEdges(bool)` | Use sharp box corners (`┌──┐`) instead of rounded (`╭──╮`) | `false` |
 | `WithHyperlinks(bool)` | Enable OSC 8 clickable terminal hyperlinks for diagrams with click events | `false` |
-| `WithWidth(width)` | Set display width in iTerm2 (`"auto"`, `"80%"`, `"800px"`, `"60cell"`) | `"auto"` |
-| `WithHeight(height)` | Set display height in iTerm2 (`"auto"`, `"400px"`, `"30cell"`) | `"auto"` |
+| `WithWidth(width)` | Set display width in iTerm2/Kitty (`"auto"`, `"80%"`, `"800px"`, `"60cell"`) | `"auto"` |
+| `WithHeight(height)` | Set display height in iTerm2/Kitty (`"auto"`, `"400px"`, `"30cell"`) | `"auto"` |
 | `WithPreserveAspectRatio(bool)` | Maintain image aspect ratio in iTerm2 | `true` |
 | `WithScale(scale)` | Rasterization scale factor for HiDPI/Retina display (`1.0`, `2.0`, `3.0`) | `1.0` |
 | `WithTimeout(duration)` | Maximum time budget for rendering requests | `10s` |
 | `WithWriter(w)` | Destination `io.Writer` | `os.Stdout` |
 | `WithOnFallback(fn)` | Callback executed whenever fallback from image to text occurs | `nil` |
-| `WithAllowCompatibleTerminals(bool)` | Allow terminals that implement OSC 1337 (e.g. WezTerm, Ghostty) | `true` |
+| `WithAllowCompatibleTerminals(bool)` | Allow terminals that implement OSC 1337 or Kitty (e.g. WezTerm, Ghostty) | `true` |
 | `WithForceTTY(bool)` | Bypass TTY detection (useful in automated tests or pseudo-terminals) | `false` |
 | `WithDisableFallback(bool)` | Fail immediately with error instead of falling back to ASCII | `false` |
 | `WithImageRenderer(r)` | Supply a custom implementation of `ImageRenderer` | Resilient chain |
@@ -242,40 +259,51 @@ Five test diagrams are provided under [`testdata/`](testdata/):
 
 ---
 
-## How the iTerm2 Inline Image Protocol Works
+## Terminal Graphics Protocols
 
-Under the hood, iTerm2 supports an escape sequence defined by the OSC 1337 specification:
+`golang-mermaid` features pure-Go implementations of the top three modern terminal graphics standards:
 
+### 1. Kitty Graphics Protocol (`APC \033_G`)
+- **Supported by**: Kitty, Ghostty, WezTerm.
+- **Specification**: Encodes images via Application Program Command (`\033_G<control>;<base64>\033\`).
+- **Chunked Streaming**: Payloads exceeding 4096 bytes are automatically chunked into 4KB payloads with `m=1` (more chunks) and `m=0` (terminal chunk).
+- **Quiet Mode**: Dispatches with `q=2` to suppress unsolicited terminal acknowledgment responses, ensuring clean stdout.
+- **Grid Layout**: Allows cell-based placement (`c=<cols>`, `r=<rows>`).
+
+### 2. iTerm2 Inline Image Protocol (`OSC 1337`)
+- **Supported by**: iTerm2, WezTerm, Ghostty, Mintty.
+- **Specification**: Operating System Command (`\033]1337;File=[args]:<base64>\a`).
+- **Options**: Supports `inline=1`, `width=<value>`, `height=<value>`, and `preserveAspectRatio=1`.
+
+### 3. DEC Sixel Bitmap Graphics (`DCS \033Pq`)
+- **Supported by**: Foot, mlterm, Mintty, xterm (with Sixel enabled).
+- **Pure-Go Architecture**: 100% native Go with **zero Cgo** or external library dependencies.
+- **Palette Quantization**: Dynamically samples and quantizes image palettes up to 256 colors (`#<idx>;2;r%;g%;b%`).
+- **Band Packing & Compression**: Encodes 6-pixel vertical slices per row mapped into printable ASCII characters (`?` through `~`) with Run-Length Encoding (RLE) compression (`!<count><char>`).
+
+### Tmux Passthrough
+All graphics escape codes (Kitty APC, iTerm2 OSC, and Sixel DCS) automatically detect tmux environments and wrap escape sequences inside tmux DCS passthrough:
 ```
-ESC ] 1337 ; File = [args] : <base64-encoded image payload> ^G
+\033Ptmux;\033<sequence-with-doubled-esc>\033\\
 ```
-
-- `ESC` is ASCII 27 (`\033`)
-- `^G` is ASCII 7 (`BEL` or `\a`)
-- Arguments include `inline=1` (renders the image in the scrollback buffer instead of saving to disk), `width=<value>`, `height=<value>`, and `preserveAspectRatio=1`.
-
-When running in tmux, the escape code is wrapped in tmux's Device Control String (DCS) passthrough:
-
-```
-ESC P tmux ; ESC ESC ] 1337 ; File = ... ^G ESC \
-```
-
-`golang-mermaid` handles this encoding, argument formatting, and tmux passthrough automatically.
 
 ---
 
 ## Terminal Compatibility
 
-| Terminal Emulator | ModeAuto Result | Notes |
-| :--- | :--- | :--- |
-| **iTerm2** | 🖼️ Inline PNG Image | Native OSC 1337 support |
-| **WezTerm** | 🖼️ Inline PNG Image | Full OSC 1337 implementation |
-| **Ghostty** | 🖼️ Inline PNG Image | Native OSC 1337 support |
-| **mintty** | 🖼️ Inline PNG Image | Windows terminal with OSC 1337 |
-| **Apple Terminal** | 🔤 Unicode Box Art | Graceful fallback (no image support) |
-| **Linux VT / Alacritty** | 🔤 Unicode Box Art | Graceful fallback (no image support) |
-| **CI/CD Runners (GitHub Actions)** | 🔤 Unicode / ASCII | Graceful fallback (non-interactive TTY) |
-| **Output piped to file (`> out.txt`)** | 🔤 Unicode / ASCII | Safe TTY detection protects output files |
+| Terminal Emulator | Default Protocol | Display Output | Notes |
+| :--- | :--- | :--- | :--- |
+| **Kitty** | `kitty` | 🖼️ Native Inline Image | High-speed Kitty graphics (`\033_G`) with chunking |
+| **Ghostty** | `kitty` | 🖼️ Native Inline Image | Native Kitty protocol preferred; OSC 1337 also supported |
+| **WezTerm** | `iterm2` | 🖼️ Native Inline Image | Full OSC 1337 and Kitty protocol support |
+| **iTerm2** | `iterm2` | 🖼️ Native Inline Image | Native OSC 1337 inline image protocol |
+| **Foot** | `sixel` | 🖼️ Native Inline Image | High-performance DEC Sixel bitmap graphics |
+| **mlterm** | `sixel` | 🖼️ Native Inline Image | DEC Sixel bitmap protocol |
+| **mintty** | `iterm2` | 🖼️ Native Inline Image | Windows terminal with OSC 1337 and Sixel |
+| **Apple Terminal** | `none` | 🔤 Unicode Box Art | Graceful fallback (no image protocol support) |
+| **Alacritty** | `none` | 🔤 Unicode Box Art | Graceful fallback (terminal does not support graphics) |
+| **CI/CD Runners** | `none` | 🔤 Unicode / ASCII | Graceful fallback (non-interactive TTY) |
+| **Output piped to file** | `none` | 🔤 Unicode / ASCII | Safe TTY detection protects output files from binary escape codes |
 
 ---
 

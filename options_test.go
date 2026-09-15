@@ -29,6 +29,7 @@ func TestOptions(t *testing.T) {
 		WithBoxFrame(true),
 		WithTitle("Sample System"),
 		WithScale(2.5),
+		WithGraphicsProtocol(ProtocolKitty),
 		WithOnFallback(func(reason string, err error) {
 			fallbackTriggered = true
 		}),
@@ -88,6 +89,9 @@ func TestOptions(t *testing.T) {
 	}
 	if cfg.Scale != 2.5 {
 		t.Errorf("expected scale 2.5, got %v", cfg.Scale)
+	}
+	if cfg.GraphicsProtocol != ProtocolKitty {
+		t.Errorf("expected graphics protocol ProtocolKitty, got %v", cfg.GraphicsProtocol)
 	}
 	if cfg.OnFallback != nil {
 		cfg.OnFallback("test", nil)

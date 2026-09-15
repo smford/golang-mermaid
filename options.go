@@ -113,6 +113,11 @@ type Config struct {
 	// OnFallback is an optional hook called whenever fallback occurs, providing SRE observability.
 	OnFallback FallbackFunc
 
+	// GraphicsProtocol specifies the terminal graphics protocol to use for image rendering
+	// (ProtocolAuto, ProtocolKitty, ProtocolITerm2, ProtocolSixel, ProtocolNone).
+	// Default is ProtocolAuto.
+	GraphicsProtocol GraphicsProtocol
+
 	// TerminalEnv provides environment variable lookup. Defaults to osEnv.
 	TerminalEnv TerminalEnv
 }
@@ -124,6 +129,7 @@ type Option func(*Config)
 func DefaultConfig() Config {
 	return Config{
 		Mode:                     ModeAuto,
+		GraphicsProtocol:         ProtocolAuto,
 		Writer:                   os.Stdout,
 		Width:                    "auto",
 		Height:                   "auto",
@@ -302,4 +308,13 @@ func WithTitle(title string) Option {
 		c.Title = title
 	}
 }
+
+// WithGraphicsProtocol sets the terminal graphics protocol to use
+// (ProtocolAuto, ProtocolKitty, ProtocolITerm2, ProtocolSixel, ProtocolNone).
+func WithGraphicsProtocol(proto GraphicsProtocol) Option {
+	return func(c *Config) {
+		c.GraphicsProtocol = proto
+	}
+}
+
 
