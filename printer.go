@@ -2,6 +2,7 @@ package mermaid
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -52,7 +53,11 @@ func New(opts ...Option) *Printer {
 
 	// Initialize default renderers if not supplied
 	if cfg.ImageRenderer == nil {
-		cfg.ImageRenderer = NewResilientImageRendererWithScale("", cfg.Timeout, cfg.Scale)
+		if cfg.Offline {
+			cfg.ImageRenderer = NewOfflineImageRenderer(cfg.Scale)
+		} else {
+			cfg.ImageRenderer = NewResilientImageRendererWithScale("", cfg.Timeout, cfg.Scale)
+		}
 	}
 	if cfg.TextRenderer == nil {
 		cfg.TextRenderer = NewFallbackTextRendererFromConfig(cfg)
@@ -223,7 +228,11 @@ func (p *Printer) Render(ctx context.Context, mermaidSource string) (*RenderResu
 			if p.config.DisableFallback {
 				return nil, fmt.Errorf("image rendering failed: %w", err)
 			}
-			fallbackReason = fmt.Sprintf("image rendering failed: %v", err)
+			if errors.Is(err, ErrOfflineNoCLI) || errors.Is(err, ErrCLINotFound) {
+				fallbackReason = "offline mode: local mmdc CLI not found, remote renderers disabled"
+			} else {
+				fallbackReason = fmt.Sprintf("image rendering failed: %v", err)
+			}
 			fallbackOccurred = true
 			targetMode = ModeUnicode
 		}

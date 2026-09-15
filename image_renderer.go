@@ -23,6 +23,7 @@ var (
 	ErrAllRenderers   = errors.New("all image renderers failed")
 	ErrRenderTimeout  = errors.New("image rendering timed out")
 	ErrInvalidStatus  = errors.New("unexpected HTTP response status")
+	ErrOfflineNoCLI   = errors.New("offline mode active: local mmdc CLI not found, remote renderers disabled")
 )
 
 // ImageRenderer is the interface for converting Mermaid diagram syntax to image bytes (typically PNG).
@@ -277,10 +278,25 @@ func NewResilientImageRendererWithScale(krokiBaseURL string, timeout time.Durati
 	}
 }
 
+// NewOfflineImageRenderer creates an ImageRenderer that strictly avoids all network calls,
+// attempting only the local mmdc binary if installed.
+func NewOfflineImageRenderer(scale float64) *ResilientImageRenderer {
+	var renderers []ImageRenderer
+	if cli, err := NewLocalCLIRenderer("", "default"); err == nil {
+		if scale > 0 {
+			cli.Scale = scale
+		}
+		renderers = append(renderers, cli)
+	}
+	return &ResilientImageRenderer{
+		Renderers: renderers,
+	}
+}
+
 // RenderImage attempts each configured renderer until one succeeds.
 func (r *ResilientImageRenderer) RenderImage(ctx context.Context, mermaidSource string) ([]byte, error) {
 	if len(r.Renderers) == 0 {
-		return nil, ErrAllRenderers
+		return nil, ErrOfflineNoCLI
 	}
 
 	var errs []string

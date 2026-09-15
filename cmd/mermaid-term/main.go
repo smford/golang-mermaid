@@ -37,6 +37,7 @@ func main() {
 		cacheDir    = flag.String("cache-dir", "", "Custom directory for disk cache (default: ~/.cache/golang-mermaid)")
 		cacheTTL    = flag.Duration("cache-ttl", 24*time.Hour, "Time-to-live for cached diagram renders (e.g. 24h, 30m)")
 		clearCache  = flag.Bool("clear-cache", false, "Clear all cached diagrams and exit")
+		offline     = flag.Bool("offline", false, "Enforce air-gapped/offline mode (disable all remote HTTP renderers)")
 	)
 
 	flag.Usage = func() {
@@ -152,9 +153,13 @@ func main() {
 		mermaid.WithScale(*scale),
 		mermaid.WithForceTTY(*forceTTY),
 		mermaid.WithOnFallback(fallbackHook),
-		mermaid.WithImageRenderer(mermaid.NewResilientImageRendererWithScale(*krokiURL, timeout, *scale)),
 		mermaid.WithCache(*cache),
 		mermaid.WithCacheTTL(*cacheTTL),
+	}
+	if *offline {
+		printerOpts = append(printerOpts, mermaid.WithOffline(true))
+	} else {
+		printerOpts = append(printerOpts, mermaid.WithImageRenderer(mermaid.NewResilientImageRendererWithScale(*krokiURL, timeout, *scale)))
 	}
 	if *cacheDir != "" {
 		printerOpts = append(printerOpts, mermaid.WithCacheDir(*cacheDir))

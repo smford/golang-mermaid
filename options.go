@@ -130,6 +130,10 @@ type Config struct {
 	// Cache is a custom cache implementation. If nil and CacheEnabled is true, DiskCache is used.
 	Cache Cache
 
+	// Offline enforces air-gapped / offline operation by disabling all remote HTTP diagram rendering.
+	// Only local mmdc is attempted (if present); otherwise immediately falls back to ASCII.
+	Offline bool
+
 	// TerminalEnv provides environment variable lookup. Defaults to osEnv.
 	TerminalEnv TerminalEnv
 }
@@ -146,6 +150,7 @@ func DefaultConfig() Config {
 		CacheDir:                 "",
 		CacheTTL:                 24 * time.Hour,
 		Cache:                    nil,
+		Offline:                  false,
 		Writer:                   os.Stdout,
 		Width:                    "auto",
 		Height:                   "auto",
@@ -362,6 +367,14 @@ func WithCustomCache(cache Cache) Option {
 		c.CacheEnabled = true
 	}
 }
+
+// WithOffline enforces offline/air-gapped mode, disabling all external HTTP rendering requests.
+func WithOffline(offline bool) Option {
+	return func(c *Config) {
+		c.Offline = offline
+	}
+}
+
 
 
 
