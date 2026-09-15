@@ -443,22 +443,26 @@ This project strictly adheres to [Semantic Versioning 2.0.0](https://semver.org/
 
 Releases are fully automated via GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)):
 
-1. **Continuous Verification**: Runs `go test -race ./...`, `go vet ./...`, and verifies `go mod verify`.
-2. **Cross-Platform Compilation**: Compiles standalone binaries of `mermaid-term` with symbol stripping (`-s -w`) for:
+1. **Trigger on Push to `main`**: Pushing new commits to `main` automatically calculates the next SemVer version using Conventional Commits:
+   - `feat:` / `feat(...):` -> **MINOR** release (e.g. `v1.0.0` -> `v1.1.0`)
+   - `BREAKING CHANGE:` or `!:` -> **MAJOR** release (e.g. `v1.1.0` -> `v2.0.0`)
+   - `fix:`, `chore:`, `docs:`, etc. -> **PATCH** release (e.g. `v1.0.0` -> `v1.0.1`)
+2. **Automated Tagging & Version Update**: Updates [`version.go`](version.go), tags the release, and publishes release assets.
+3. **Continuous Verification**: Executes `go test -race ./...`, `go vet ./...`, and verifies `go mod verify`.
+4. **Cross-Platform Compilation**: Compiles standalone binaries of `mermaid-term` with symbol stripping (`-s -w`) for:
    - `darwin/amd64` (macOS Intel)
    - `darwin/arm64` (macOS Apple Silicon)
    - `linux/amd64` (Linux x86_64)
    - `linux/arm64` (Linux ARM64 / Graviton)
    - `windows/amd64` (Windows x86_64)
-3. **Packaging & Checksums**: Bundles binaries with `README.md` and `LICENSE` into `.tar.gz` and `.zip` archives, calculating SHA-256 `checksums.txt`.
-4. **GitHub Releases**: Publishes release notes, tagged archives, and checksums.
-5. **Go Proxy Cache Priming**: Automatically primes `proxy.golang.org` so the new version is immediately resolvable by Go module clients worldwide.
+5. **Packaging & Checksums**: Bundles binaries with `README.md` and `LICENSE` into `.tar.gz` and `.zip` archives, calculating SHA-256 `checksums.txt`.
+6. **GitHub Releases**: Publishes release notes, tagged archives, and checksums.
+7. **Go Proxy Cache Priming**: Automatically primes `proxy.golang.org` so the new version is immediately resolvable by Go module clients worldwide.
 
-To release a new version:
-```bash
-git tag -a v1.0.0 -m "Release v1.0.0"
-git push origin v1.0.0
-```
+To trigger a release manually:
+- Push commits to `main` with conventional commit prefixes.
+- Or trigger via GitHub Actions UI (`workflow_dispatch`).
+- Or push an explicit tag: `git push origin vX.Y.Z`.
 
 ### Automated Dependency Maintenance
 
