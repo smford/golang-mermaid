@@ -3,6 +3,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/smford/golang-mermaid.svg)](https://pkg.go.dev/github.com/smford/golang-mermaid)
 [![Release](https://img.shields.io/github/v/release/smford/golang-mermaid?color=blue&logo=github)](https://github.com/smford/golang-mermaid/releases)
 [![CI](https://github.com/smford/golang-mermaid/actions/workflows/ci.yml/badge.svg)](https://github.com/smford/golang-mermaid/actions/workflows/ci.yml)
+[![Dependabot](https://img.shields.io/badge/dependabot-active-blue?logo=dependabot)](.github/dependabot.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/smford/golang-mermaid)](https://goreportcard.com/report/github.com/smford/golang-mermaid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -458,6 +459,12 @@ To release a new version:
 git tag -a v1.0.0 -m "Release v1.0.0"
 git push origin v1.0.0
 ```
+
+### Automated Dependency Maintenance
+
+[Dependabot](.github/dependabot.yml) is configured for automated vulnerability monitoring and dependency maintenance:
+- **Go Modules (`gomod`)**: Scans `go.mod` weekly (Mondays 04:00 UTC), grouping updates into a single PR (`chore(deps)`).
+- **GitHub Actions (`github-actions`)**: Tracks workflow action versions weekly, grouping action upgrades (`chore(ci)`).
 
 ---
 
