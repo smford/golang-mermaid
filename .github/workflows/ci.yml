@@ -1,0 +1,43 @@
+name: CI
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }} - Go ${{ matrix.go }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        go: ['1.22', '1.23', '1.24']
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go ${{ matrix.go }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+          cache: true
+
+      - name: Verify Module Dependencies
+        run: |
+          go mod verify
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run Unit Tests with Race Detector
+        run: go test -v -count=1 -race ./...
+
+      - name: Build All Binaries
+        run: |
+          go build ./...
+          go build -o /dev/null ./cmd/mermaid-term
+          go build -o /dev/null ./examples/simple

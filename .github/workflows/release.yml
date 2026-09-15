@@ -1,0 +1,163 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Git Tag to release (e.g. v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    name: Verify & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Verify Module Integrity
+        run: |
+          go mod verify
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run Tests with Race Detector
+        run: go test -v -count=1 -race ./...
+
+  build-and-release:
+    name: Build Cross-Platform Binaries & Publish Release
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Determine Release Tag
+        id: get_version
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          echo "TAG=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Build Cross-Platform CLI Binaries
+        env:
+          TAG: ${{ steps.get_version.outputs.TAG }}
+        run: |
+          mkdir -p dist
+          PLATFORMS=(
+            "darwin/amd64"
+            "darwin/arm64"
+            "linux/amd64"
+            "linux/arm64"
+            "windows/amd64"
+          )
+
+          for PLATFORM in "${PLATFORMS[@]}"; do
+            GOOS="${PLATFORM%/*}"
+            GOARCH="${PLATFORM#*/}"
+            EXT=""
+            if [ "${GOOS}" = "windows" ]; then
+              EXT=".exe"
+            fi
+
+            BIN_NAME="mermaid-term${EXT}"
+            ARCHIVE_NAME="mermaid-term_${TAG}_${GOOS}_${GOARCH}"
+            BUILD_DIR="dist/${ARCHIVE_NAME}"
+            mkdir -p "${BUILD_DIR}"
+
+            echo "Building binary for ${GOOS}/${GOARCH}..."
+            CGO_ENABLED=0 GOOS="${GOOS}" GOARCH="${GOARCH}" go build \
+              -trimpath \
+              -ldflags="-s -w -X main.version=${TAG}" \
+              -o "${BUILD_DIR}/${BIN_NAME}" \
+              ./cmd/mermaid-term
+
+            cp README.md LICENSE "${BUILD_DIR}/"
+
+            if [ "${GOOS}" = "windows" ]; then
+              (cd dist && zip -r "${ARCHIVE_NAME}.zip" "${ARCHIVE_NAME}")
+            else
+              tar -czf "dist/${ARCHIVE_NAME}.tar.gz" -C dist "${ARCHIVE_NAME}"
+            fi
+            rm -rf "${BUILD_DIR}"
+          done
+
+      - name: Generate Checksums
+        run: |
+          cd dist
+          sha256sum * > checksums.txt
+          cat checksums.txt
+
+      - name: Prepare Release Notes
+        run: |
+          TAG="${{ steps.get_version.outputs.TAG }}"
+          cat <<EOF > release_notes.md
+          ### ${TAG}
+
+          Production release of **\`golang-mermaid\`** – resilient, terminal-native Mermaid diagram rendering for modern terminals.
+
+          #### Go Module Installation (For Go Applications)
+
+          Add or update this module in your Go project:
+
+          \`\`\`bash
+          go get github.com/smford/golang-mermaid@${TAG}
+          \`\`\`
+
+          Or import directly:
+
+          \`\`\`go
+          import mermaid "github.com/smford/golang-mermaid"
+          \`\`\`
+
+          #### Standalone CLI Tool (\`mermaid-term\`)
+
+          Download the pre-compiled binary archive for your platform below and verify its SHA-256 signature against \`checksums.txt\`.
+          EOF
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_version.outputs.TAG }}
+          name: ${{ steps.get_version.outputs.TAG }}
+          body_path: release_notes.md
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/checksums.txt
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+
+      - name: Index in Go Module Proxy
+        run: |
+          TAG="${{ steps.get_version.outputs.TAG }}"
+          echo "Warming Go Module Proxy (proxy.golang.org) for ${TAG}..."
+          GOPROXY=https://proxy.golang.org go list -m "github.com/smford/golang-mermaid@${TAG}" || true

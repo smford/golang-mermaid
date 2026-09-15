@@ -12,6 +12,8 @@ import (
 	mermaid "github.com/smford/golang-mermaid"
 )
 
+var version = "v" + mermaid.Version
+
 func main() {
 	var (
 		filePath    = flag.String("file", "", "Path to Mermaid diagram file (.mmd or .mermaid). If omitted, reads from stdin.")
@@ -42,6 +44,7 @@ func main() {
 		probe       = flag.Bool("probe", false, "Probe terminal capabilities via in-band PTY escape queries (ideal for SSH sessions)")
 		interactive = flag.Bool("interactive", false, "Launch interactive 2D pan & zoom pager for large diagrams")
 		metrics     = flag.Bool("metrics", false, "Print Prometheus-compatible SRE telemetry metrics to stderr on exit")
+		showVersion = flag.Bool("version", false, "Print version information and exit")
 	)
 
 	flag.Usage = func() {
@@ -59,6 +62,11 @@ func main() {
 	}
 
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("mermaid-term %s\n", version)
+		return
+	}
 
 	// Clear cache command
 	if *clearCache {

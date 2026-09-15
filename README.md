@@ -1,6 +1,8 @@
 # golang-mermaid
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/smford/golang-mermaid.svg)](https://pkg.go.dev/github.com/smford/golang-mermaid)
+[![Release](https://img.shields.io/github/v/release/smford/golang-mermaid?color=blue&logo=github)](https://github.com/smford/golang-mermaid/releases)
+[![CI](https://github.com/smford/golang-mermaid/actions/workflows/ci.yml/badge.svg)](https://github.com/smford/golang-mermaid/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/smford/golang-mermaid)](https://goreportcard.com/report/github.com/smford/golang-mermaid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -79,11 +81,36 @@ flowchart TD
 
 ## Installation
 
+### For Go Applications & Modules
+
+To use `golang-mermaid` as a dependency in another Go application:
+
 ```bash
-go get github.com/smford/golang-mermaid
+# Add specific SemVer release to your go.mod
+go get github.com/smford/golang-mermaid@v1.0.0
+
+# Or get the latest stable version
+go get github.com/smford/golang-mermaid@latest
 ```
 
-Requires Go 1.21 or later.
+Import in your Go code:
+```go
+import mermaid "github.com/smford/golang-mermaid"
+```
+
+The current version can also be inspected programmatically:
+```go
+fmt.Println(mermaid.Version) // "1.0.0"
+```
+
+### Standalone CLI Tool (`mermaid-term`)
+
+Install the binary directly with `go install`:
+```bash
+go install github.com/smford/golang-mermaid/cmd/mermaid-term@v1.0.0
+```
+
+Pre-compiled cross-platform archives for macOS (Apple Silicon & Intel), Linux (`amd64`, `arm64`), and Windows (`amd64`) are also available from [GitHub Releases](https://github.com/smford/golang-mermaid/releases).
 
 ---
 
@@ -401,6 +428,36 @@ go test -v -race ./...
 ```
 
 All unit tests and diagram validation tests run with 100% pass rate.
+
+---
+
+## Semantic Versioning & Release Pipeline
+
+This project strictly adheres to [Semantic Versioning 2.0.0](https://semver.org/) (`vMAJOR.MINOR.PATCH`):
+- **MAJOR**: Incompatible API modifications.
+- **MINOR**: Backward-compatible new features (e.g. graphics protocols, new cache backends).
+- **PATCH**: Backward-compatible bug fixes and performance optimizations.
+
+### Automated GitHub Release Workflow
+
+Releases are fully automated via GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)):
+
+1. **Continuous Verification**: Runs `go test -race ./...`, `go vet ./...`, and verifies `go mod verify`.
+2. **Cross-Platform Compilation**: Compiles standalone binaries of `mermaid-term` with symbol stripping (`-s -w`) for:
+   - `darwin/amd64` (macOS Intel)
+   - `darwin/arm64` (macOS Apple Silicon)
+   - `linux/amd64` (Linux x86_64)
+   - `linux/arm64` (Linux ARM64 / Graviton)
+   - `windows/amd64` (Windows x86_64)
+3. **Packaging & Checksums**: Bundles binaries with `README.md` and `LICENSE` into `.tar.gz` and `.zip` archives, calculating SHA-256 `checksums.txt`.
+4. **GitHub Releases**: Publishes release notes, tagged archives, and checksums.
+5. **Go Proxy Cache Priming**: Automatically primes `proxy.golang.org` so the new version is immediately resolvable by Go module clients worldwide.
+
+To release a new version:
+```bash
+git tag -a v1.0.0 -m "Release v1.0.0"
+git push origin v1.0.0
+```
 
 ---
 
