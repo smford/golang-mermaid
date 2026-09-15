@@ -1,0 +1,11 @@
+stateDiagram-v2
+    [*] --> Pending : Pod Scheduled
+    Pending --> ContainerCreating : Images Pulling
+    ContainerCreating --> Running : Readiness Probe Succeeded
+    Running --> Terminating : SIGTERM Sent
+    Running --> CrashLoopBackOff : Liveness Probe Failed
+    CrashLoopBackOff --> Running : Exponential Backoff Retry
+    Terminating --> Succeeded : Exit Code 0
+    Terminating --> Failed : Exit Code != 0
+    Succeeded --> [*]
+    Failed --> [*]

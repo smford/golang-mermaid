@@ -1,0 +1,18 @@
+sequenceDiagram
+    autonumber
+    actor User as Engineer
+    participant Web as Internal Portal
+    participant IdP as Okta / SSO Provider
+    participant Vault as HashiCorp Vault
+    participant Kube as Production Kube API
+
+    User->>Web: Request Cluster Access
+    Web->>IdP: Redirect to OIDC Authentication
+    IdP-->>User: Prompt MFA (FIDO2 / WebAuthn)
+    User->>IdP: Provide Biometric Token
+    IdP-->>Web: Return Signed JWT ID Token
+    Web->>Vault: Exchange JWT for Short-Lived Cert
+    Vault-->>Web: Issue 1-Hour TLS Client Cert
+    Web-->>User: Configure kubectl Context
+    User->>Kube: kubectl get pods --namespace=production
+    Kube-->>User: 200 OK (Pod List)

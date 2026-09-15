@@ -1,0 +1,20 @@
+graph TD
+    Client[Web & Mobile Clients] --> CloudFront[CloudFront CDN]
+    CloudFront --> ALB[Application Load Balancer]
+    
+    subgraph VPC [Kubernetes Production Cluster]
+        ALB --> Gateway[API Gateway Service]
+        Gateway --> AuthService[Auth Service]
+        Gateway --> OrderService[Order Service]
+        Gateway --> PaymentService[Payment Service]
+        
+        OrderService --> Kafka[(Kafka Event Bus)]
+        Kafka --> NotificationWorker[Notification Worker]
+        
+        OrderService --> RedisCache[(Redis Cluster Cache)]
+        OrderService --> PrimaryDB[(PostgreSQL Primary DB)]
+        AuthService --> PrimaryDB
+    end
+    
+    PaymentService --> StripeAPI[Stripe Payment Gateway]
+    NotificationWorker --> SendGrid[SendGrid Email API]

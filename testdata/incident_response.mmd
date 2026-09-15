@@ -1,0 +1,20 @@
+flowchart TD
+    Alert[Prometheus / Datadog Alert] --> PagerDuty[PagerDuty Triggered]
+    PagerDuty --> OnCall[On-Call SRE Notified]
+    
+    OnCall --> Acknowledge{Ack within 5m?}
+    Acknowledge -- No --> Escalate[Escalate to Secondary SRE]
+    Acknowledge -- Yes --> Assess[Assess Severity: P1 / P2 / P3]
+    
+    Assess --> IsSev1{Severity == P1?}
+    IsSev1 -- Yes --> WarRoom[Open Incident War Room & Slack Channel]
+    IsSev1 -- No --> ApplyRunbook[Execute Standard Runbook]
+    
+    WarRoom --> Mitigate[Implement Mitigation / Rollback]
+    ApplyRunbook --> Mitigate
+    
+    Mitigate --> Verify{Metrics Healthy?}
+    Verify -- No --> WarRoom
+    Verify -- Yes --> Resolve[Resolve Incident]
+    
+    Resolve --> Postmortem[Schedule Blameless Postmortem]

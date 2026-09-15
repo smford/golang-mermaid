@@ -1,0 +1,25 @@
+erDiagram
+    SERVICE ||--o{ SLO : defines
+    SLO ||--|{ SLI_METRIC : evaluates
+    SERVICE ||--o{ INCIDENT : experiences
+    INCIDENT ||--|{ ON_CALL_SRE : assigned_to
+
+    SERVICE {
+        string id PK
+        string name
+        string tier
+        string repo_url
+    }
+    SLO {
+        string id PK
+        string service_id FK
+        float target_percentage
+        int window_days
+    }
+    INCIDENT {
+        string id PK
+        string service_id FK
+        string severity
+        string status
+        datetime created_at
+    }
