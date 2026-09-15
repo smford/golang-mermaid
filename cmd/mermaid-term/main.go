@@ -38,6 +38,7 @@ func main() {
 		cacheTTL    = flag.Duration("cache-ttl", 24*time.Hour, "Time-to-live for cached diagram renders (e.g. 24h, 30m)")
 		clearCache  = flag.Bool("clear-cache", false, "Clear all cached diagrams and exit")
 		offline     = flag.Bool("offline", false, "Enforce air-gapped/offline mode (disable all remote HTTP renderers)")
+		markdown    = flag.Bool("markdown", false, "Parse Markdown document and render embedded ```mermaid blocks inline")
 	)
 
 	flag.Usage = func() {
@@ -177,6 +178,18 @@ func main() {
 	}
 
 	ctx := context.Background()
+
+	// Check if input is a Markdown file or explicitly requested via -markdown
+	if *markdown || (targetFile != "" && mermaid.IsMarkdownFile(targetFile)) {
+		renderedMD, err := printer.RenderMarkdown(ctx, diagramSource)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error rendering markdown: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(renderedMD)
+		return
+	}
+
 	res, err := printer.Render(ctx, diagramSource)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error rendering diagram: %v\n", err)

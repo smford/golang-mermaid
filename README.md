@@ -242,6 +242,12 @@ go build -o bin/mermaid-term cmd/mermaid-term/main.go
 # Force Unicode mode
 ./bin/mermaid-term -mode=unicode testdata/sequence_auth.mmd
 
+# Render an entire Markdown runbook with embedded diagrams inline
+./bin/mermaid-term testdata/runbook.md
+
+# Air-gapped / offline mode
+./bin/mermaid-term -offline testdata/architecture.mmd
+
 # Enable verbose SRE diagnostic logs
 ./bin/mermaid-term -v testdata/state_machine.mmd
 
