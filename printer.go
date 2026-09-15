@@ -167,6 +167,14 @@ func (p *Printer) Render(ctx context.Context, mermaidSource string) (*RenderResu
 	case ModeImage:
 		if p.config.GraphicsProtocol == ProtocolAuto {
 			detected := DetectGraphicsProtocol(p.config.TerminalEnv, p.config.AllowCompatibleTerminals)
+			if detected == ProtocolNone && p.config.TerminalProbe {
+				caps := ProbeTerminal(80 * time.Millisecond)
+				if caps.SupportsKitty {
+					detected = ProtocolKitty
+				} else if caps.SupportsSixel {
+					detected = ProtocolSixel
+				}
+			}
 			if detected != ProtocolNone {
 				activeProto = detected
 			} else {
@@ -190,6 +198,14 @@ func (p *Printer) Render(ctx context.Context, mermaidSource string) (*RenderResu
 	case ModeAuto:
 		if p.config.GraphicsProtocol == ProtocolAuto {
 			activeProto = DetectGraphicsProtocol(p.config.TerminalEnv, p.config.AllowCompatibleTerminals)
+			if activeProto == ProtocolNone && p.config.TerminalProbe {
+				caps := ProbeTerminal(80 * time.Millisecond)
+				if caps.SupportsKitty {
+					activeProto = ProtocolKitty
+				} else if caps.SupportsSixel {
+					activeProto = ProtocolSixel
+				}
+			}
 		} else {
 			activeProto = p.config.GraphicsProtocol
 		}

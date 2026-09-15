@@ -34,6 +34,7 @@ func TestOptions(t *testing.T) {
 		WithCacheDir("/tmp/test-cache"),
 		WithCacheTTL(10 * time.Minute),
 		WithOffline(true),
+		WithTerminalProbe(true),
 		WithOnFallback(func(reason string, err error) {
 			fallbackTriggered = true
 		}),
@@ -108,6 +109,9 @@ func TestOptions(t *testing.T) {
 	}
 	if !cfg.Offline {
 		t.Errorf("expected Offline true")
+	}
+	if !cfg.TerminalProbe {
+		t.Errorf("expected TerminalProbe true")
 	}
 	if cfg.OnFallback != nil {
 		cfg.OnFallback("test", nil)

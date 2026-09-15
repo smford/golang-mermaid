@@ -134,6 +134,9 @@ type Config struct {
 	// Only local mmdc is attempted (if present); otherwise immediately falls back to ASCII.
 	Offline bool
 
+	// TerminalProbe enables in-band PTY capability querying (\033[c) for SSH environments.
+	TerminalProbe bool
+
 	// TerminalEnv provides environment variable lookup. Defaults to osEnv.
 	TerminalEnv TerminalEnv
 }
@@ -151,6 +154,7 @@ func DefaultConfig() Config {
 		CacheTTL:                 24 * time.Hour,
 		Cache:                    nil,
 		Offline:                  false,
+		TerminalProbe:            false,
 		Writer:                   os.Stdout,
 		Width:                    "auto",
 		Height:                   "auto",
@@ -374,6 +378,14 @@ func WithOffline(offline bool) Option {
 		c.Offline = offline
 	}
 }
+
+// WithTerminalProbe enables in-band PTY capability probing (\033[c) for SSH sessions.
+func WithTerminalProbe(probe bool) Option {
+	return func(c *Config) {
+		c.TerminalProbe = probe
+	}
+}
+
 
 
 

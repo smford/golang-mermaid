@@ -182,6 +182,7 @@ err := printer.PrintFile("testdata/incident_response.mmd")
 | `WithForceTTY(bool)` | Bypass TTY detection (useful in automated tests or pseudo-terminals) | `false` |
 | `WithDisableFallback(bool)` | Fail immediately with error instead of falling back to ASCII | `false` |
 | `WithOffline(bool)` | Enforce air-gapped/offline mode (skips remote renderers, uses local mmdc or text) | `false` |
+| `WithTerminalProbe(bool)` | Probe terminal capabilities via in-band PTY queries (`\033[c`) for SSH | `false` |
 | `WithCache(bool)` | Enable content-addressed disk & memory caching | `false` |
 | `WithCacheDir(dir)` | Custom disk cache directory path (defaults to `~/.cache/golang-mermaid`) | `""` |
 | `WithCacheTTL(duration)` | Time-to-live for cached diagram renders | `24h` |

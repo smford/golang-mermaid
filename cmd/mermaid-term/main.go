@@ -39,6 +39,7 @@ func main() {
 		clearCache  = flag.Bool("clear-cache", false, "Clear all cached diagrams and exit")
 		offline     = flag.Bool("offline", false, "Enforce air-gapped/offline mode (disable all remote HTTP renderers)")
 		markdown    = flag.Bool("markdown", false, "Parse Markdown document and render embedded ```mermaid blocks inline")
+		probe       = flag.Bool("probe", false, "Probe terminal capabilities via in-band PTY escape queries (ideal for SSH sessions)")
 	)
 
 	flag.Usage = func() {
@@ -156,6 +157,7 @@ func main() {
 		mermaid.WithOnFallback(fallbackHook),
 		mermaid.WithCache(*cache),
 		mermaid.WithCacheTTL(*cacheTTL),
+		mermaid.WithTerminalProbe(*probe),
 	}
 	if *offline {
 		printerOpts = append(printerOpts, mermaid.WithOffline(true))
