@@ -137,6 +137,9 @@ type Config struct {
 	// TerminalProbe enables in-band PTY capability querying (\033[c) for SSH environments.
 	TerminalProbe bool
 
+	// Interactive launches an interactive terminal pager with 2D pan and navigation for large diagrams.
+	Interactive bool
+
 	// TerminalEnv provides environment variable lookup. Defaults to osEnv.
 	TerminalEnv TerminalEnv
 }
@@ -155,6 +158,7 @@ func DefaultConfig() Config {
 		Cache:                    nil,
 		Offline:                  false,
 		TerminalProbe:            false,
+		Interactive:              false,
 		Writer:                   os.Stdout,
 		Width:                    "auto",
 		Height:                   "auto",
@@ -385,6 +389,14 @@ func WithTerminalProbe(probe bool) Option {
 		c.TerminalProbe = probe
 	}
 }
+
+// WithInteractive enables an interactive terminal pager with 2D pan and navigation for large diagrams.
+func WithInteractive(interactive bool) Option {
+	return func(c *Config) {
+		c.Interactive = interactive
+	}
+}
+
 
 
 

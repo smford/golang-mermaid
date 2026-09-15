@@ -35,6 +35,7 @@ func TestOptions(t *testing.T) {
 		WithCacheTTL(10 * time.Minute),
 		WithOffline(true),
 		WithTerminalProbe(true),
+		WithInteractive(true),
 		WithOnFallback(func(reason string, err error) {
 			fallbackTriggered = true
 		}),
@@ -112,6 +113,9 @@ func TestOptions(t *testing.T) {
 	}
 	if !cfg.TerminalProbe {
 		t.Errorf("expected TerminalProbe true")
+	}
+	if !cfg.Interactive {
+		t.Errorf("expected Interactive true")
 	}
 	if cfg.OnFallback != nil {
 		cfg.OnFallback("test", nil)

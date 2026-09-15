@@ -40,6 +40,7 @@ func main() {
 		offline     = flag.Bool("offline", false, "Enforce air-gapped/offline mode (disable all remote HTTP renderers)")
 		markdown    = flag.Bool("markdown", false, "Parse Markdown document and render embedded ```mermaid blocks inline")
 		probe       = flag.Bool("probe", false, "Probe terminal capabilities via in-band PTY escape queries (ideal for SSH sessions)")
+		interactive = flag.Bool("interactive", false, "Launch interactive 2D pan & zoom pager for large diagrams")
 	)
 
 	flag.Usage = func() {
@@ -158,6 +159,7 @@ func main() {
 		mermaid.WithCache(*cache),
 		mermaid.WithCacheTTL(*cacheTTL),
 		mermaid.WithTerminalProbe(*probe),
+		mermaid.WithInteractive(*interactive),
 	}
 	if *offline {
 		printerOpts = append(printerOpts, mermaid.WithOffline(true))
@@ -201,6 +203,15 @@ func main() {
 	if *verbose {
 		fmt.Fprintf(os.Stderr, "[SRE Info] Rendered in %v using mode: %s (protocol: %s, cache hit: %v, fallback: %v)\n\n",
 			res.Duration, res.Mode, res.Protocol, res.CacheHit, res.FallbackOccurred)
+	}
+
+	// Interactive pager mode
+	if *interactive && mermaid.IsTerminal(os.Stdout) {
+		pager := mermaid.NewPager(res.Output)
+		if err := pager.Run(os.Stdin, os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "Pager error: %v\n", err)
+		}
+		return
 	}
 
 	// Output result

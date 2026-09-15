@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"golang.org/x/term"
 )
 
 // RenderResult encapsulates the result of a diagram rendering operation.
@@ -86,6 +88,11 @@ func (p *Printer) PrintContext(ctx context.Context, mermaidSource string) error 
 	result, err := p.Render(ctx, mermaidSource)
 	if err != nil {
 		return err
+	}
+
+	if p.config.Interactive && term.IsTerminal(int(os.Stdin.Fd())) && IsTerminal(p.config.Writer) {
+		pager := NewPager(result.Output)
+		return pager.Run(os.Stdin, p.config.Writer)
 	}
 
 	_, err = io.WriteString(p.config.Writer, result.Output)
