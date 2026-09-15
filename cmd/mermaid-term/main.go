@@ -33,6 +33,10 @@ func main() {
 		verbose     = flag.Bool("v", false, "Enable verbose SRE logging (diagnostics, fallback reasons, duration)")
 		forceTTY    = flag.Bool("force-tty", false, "Force treating output as an interactive TTY")
 		scale       = flag.Float64("scale", 1.0, "Rasterization scale factor for image rendering (e.g. 1.0, 2.0 for Retina/HiDPI)")
+		cache       = flag.Bool("cache", true, "Enable content-addressed diagram disk caching")
+		cacheDir    = flag.String("cache-dir", "", "Custom directory for disk cache (default: ~/.cache/golang-mermaid)")
+		cacheTTL    = flag.Duration("cache-ttl", 24*time.Hour, "Time-to-live for cached diagram renders (e.g. 24h, 30m)")
+		clearCache  = flag.Bool("clear-cache", false, "Clear all cached diagrams and exit")
 	)
 
 	flag.Usage = func() {
@@ -50,6 +54,21 @@ func main() {
 	}
 
 	flag.Parse()
+
+	// Clear cache command
+	if *clearCache {
+		c, err := mermaid.NewDiskCache(*cacheDir)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error accessing cache: %v\n", err)
+			os.Exit(1)
+		}
+		if err := c.Clear(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error clearing cache: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("golang-mermaid: cache cleared successfully.")
+		return
+	}
 
 	// Positional argument fallback for file path
 	targetFile := *filePath
@@ -116,8 +135,8 @@ func main() {
 		_ = os.Setenv("NO_COLOR", "1")
 	}
 
-	// Build printer
-	printer := mermaid.New(
+	// Build printer options
+	printerOpts := []mermaid.Option{
 		mermaid.WithMode(mode),
 		mermaid.WithGraphicsProtocol(proto),
 		mermaid.WithWidth(*width),
@@ -134,7 +153,14 @@ func main() {
 		mermaid.WithForceTTY(*forceTTY),
 		mermaid.WithOnFallback(fallbackHook),
 		mermaid.WithImageRenderer(mermaid.NewResilientImageRendererWithScale(*krokiURL, timeout, *scale)),
-	)
+		mermaid.WithCache(*cache),
+		mermaid.WithCacheTTL(*cacheTTL),
+	}
+	if *cacheDir != "" {
+		printerOpts = append(printerOpts, mermaid.WithCacheDir(*cacheDir))
+	}
+
+	printer := mermaid.New(printerOpts...)
 
 	if *verbose {
 		fmt.Fprintf(os.Stderr, "[SRE Info] Terminal iTerm2: %v | Detected Protocol: %s | Destination TTY: %v\n",
@@ -142,7 +168,7 @@ func main() {
 			mermaid.DetectGraphicsProtocol(nil, true),
 			mermaid.IsTerminal(os.Stdout),
 		)
-		fmt.Fprintf(os.Stderr, "[SRE Info] Configured Mode: %s | Protocol: %s | Width: %s | Timeout: %v\n", mode, proto, *width, timeout)
+		fmt.Fprintf(os.Stderr, "[SRE Info] Configured Mode: %s | Protocol: %s | Cache: %v | Width: %s | Timeout: %v\n", mode, proto, *cache, *width, timeout)
 	}
 
 	ctx := context.Background()
@@ -153,8 +179,8 @@ func main() {
 	}
 
 	if *verbose {
-		fmt.Fprintf(os.Stderr, "[SRE Info] Rendered in %v using mode: %s (protocol: %s, fallback: %v)\n\n",
-			res.Duration, res.Mode, res.Protocol, res.FallbackOccurred)
+		fmt.Fprintf(os.Stderr, "[SRE Info] Rendered in %v using mode: %s (protocol: %s, cache hit: %v, fallback: %v)\n\n",
+			res.Duration, res.Mode, res.Protocol, res.CacheHit, res.FallbackOccurred)
 	}
 
 	// Output result

@@ -30,6 +30,9 @@ func TestOptions(t *testing.T) {
 		WithTitle("Sample System"),
 		WithScale(2.5),
 		WithGraphicsProtocol(ProtocolKitty),
+		WithCache(true),
+		WithCacheDir("/tmp/test-cache"),
+		WithCacheTTL(10 * time.Minute),
 		WithOnFallback(func(reason string, err error) {
 			fallbackTriggered = true
 		}),
@@ -92,6 +95,15 @@ func TestOptions(t *testing.T) {
 	}
 	if cfg.GraphicsProtocol != ProtocolKitty {
 		t.Errorf("expected graphics protocol ProtocolKitty, got %v", cfg.GraphicsProtocol)
+	}
+	if !cfg.CacheEnabled {
+		t.Errorf("expected CacheEnabled true")
+	}
+	if cfg.CacheDir != "/tmp/test-cache" {
+		t.Errorf("expected CacheDir /tmp/test-cache, got %s", cfg.CacheDir)
+	}
+	if cfg.CacheTTL != 10*time.Minute {
+		t.Errorf("expected CacheTTL 10m, got %v", cfg.CacheTTL)
 	}
 	if cfg.OnFallback != nil {
 		cfg.OnFallback("test", nil)

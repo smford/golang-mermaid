@@ -118,6 +118,18 @@ type Config struct {
 	// Default is ProtocolAuto.
 	GraphicsProtocol GraphicsProtocol
 
+	// CacheEnabled specifies whether content-addressed diagram caching is enabled.
+	CacheEnabled bool
+
+	// CacheDir specifies the directory path for the disk cache.
+	CacheDir string
+
+	// CacheTTL specifies the time-to-live for cached diagram renders. Default is 24 hours.
+	CacheTTL time.Duration
+
+	// Cache is a custom cache implementation. If nil and CacheEnabled is true, DiskCache is used.
+	Cache Cache
+
 	// TerminalEnv provides environment variable lookup. Defaults to osEnv.
 	TerminalEnv TerminalEnv
 }
@@ -130,6 +142,10 @@ func DefaultConfig() Config {
 	return Config{
 		Mode:                     ModeAuto,
 		GraphicsProtocol:         ProtocolAuto,
+		CacheEnabled:             false,
+		CacheDir:                 "",
+		CacheTTL:                 24 * time.Hour,
+		Cache:                    nil,
 		Writer:                   os.Stdout,
 		Width:                    "auto",
 		Height:                   "auto",
@@ -316,5 +332,36 @@ func WithGraphicsProtocol(proto GraphicsProtocol) Option {
 		c.GraphicsProtocol = proto
 	}
 }
+
+// WithCache enables or disables content-addressed diagram caching.
+func WithCache(enabled bool) Option {
+	return func(c *Config) {
+		c.CacheEnabled = enabled
+	}
+}
+
+// WithCacheDir sets a custom directory for disk caching and enables caching.
+func WithCacheDir(dir string) Option {
+	return func(c *Config) {
+		c.CacheDir = dir
+		c.CacheEnabled = true
+	}
+}
+
+// WithCacheTTL sets the time-to-live for cached diagram renders.
+func WithCacheTTL(ttl time.Duration) Option {
+	return func(c *Config) {
+		c.CacheTTL = ttl
+	}
+}
+
+// WithCustomCache supplies a custom Cache implementation and enables caching.
+func WithCustomCache(cache Cache) Option {
+	return func(c *Config) {
+		c.Cache = cache
+		c.CacheEnabled = true
+	}
+}
+
 
 

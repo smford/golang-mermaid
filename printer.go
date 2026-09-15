@@ -31,6 +31,9 @@ type RenderResult struct {
 	// FallbackReason describes why the fallback occurred, if applicable.
 	FallbackReason string
 
+	// CacheHit reports whether the diagram was served from the content-addressed cache.
+	CacheHit bool
+
 	// Duration is the total time spent rendering.
 	Duration time.Duration
 }
@@ -53,6 +56,16 @@ func New(opts ...Option) *Printer {
 	}
 	if cfg.TextRenderer == nil {
 		cfg.TextRenderer = NewFallbackTextRendererFromConfig(cfg)
+	}
+
+	// Initialize cache if enabled and not supplied
+	if cfg.CacheEnabled && cfg.Cache == nil {
+		diskCache, err := NewDiskCache(cfg.CacheDir)
+		if err != nil {
+			cfg.Cache = NewMemoryCache()
+		} else {
+			cfg.Cache = diskCache
+		}
 	}
 
 	return &Printer{config: cfg}
@@ -119,6 +132,23 @@ func (p *Printer) Render(ctx context.Context, mermaidSource string) (*RenderResu
 	if p.config.Timeout > 0 {
 		ctx, cancel = context.WithTimeout(ctx, p.config.Timeout)
 		defer cancel()
+	}
+
+	// Check cache if caching is enabled
+	var cacheKey string
+	if p.config.CacheEnabled && p.config.Cache != nil {
+		cacheKey = ComputeCacheKey(mermaidSource, &p.config)
+		if cached, ok := p.config.Cache.Get(cacheKey); ok {
+			return &RenderResult{
+				Mode:             cached.Mode,
+				Protocol:         cached.Protocol,
+				ImageData:        cached.ImageData,
+				Output:           cached.Output,
+				FallbackOccurred: false,
+				CacheHit:         true,
+				Duration:         time.Since(start),
+			}, nil
+		}
 	}
 
 	targetMode := p.config.Mode
@@ -218,14 +248,24 @@ func (p *Printer) Render(ctx context.Context, mermaidSource string) (*RenderResu
 			fallbackOccurred = true
 			targetMode = ModeUnicode
 		} else {
-			return &RenderResult{
+			res := &RenderResult{
 				Mode:             ModeImage,
 				Protocol:         activeProto,
 				ImageData:        imgData,
 				Output:           output,
 				FallbackOccurred: false,
 				Duration:         time.Since(start),
-			}, nil
+			}
+			if p.config.CacheEnabled && p.config.Cache != nil && cacheKey != "" {
+				_ = p.config.Cache.Set(cacheKey, &CachedResult{
+					Mode:      res.Mode,
+					Protocol:  res.Protocol,
+					ImageData: res.ImageData,
+					Output:    res.Output,
+					CreatedAt: time.Now(),
+				}, p.config.CacheTTL)
+			}
+			return res, nil
 		}
 	}
 
@@ -245,13 +285,23 @@ func (p *Printer) Render(ctx context.Context, mermaidSource string) (*RenderResu
 		actualMode = ModeASCII
 	}
 
-	return &RenderResult{
+	res := &RenderResult{
 		Mode:             actualMode,
 		Output:           text,
 		FallbackOccurred: fallbackOccurred,
 		FallbackReason:   fallbackReason,
 		Duration:         time.Since(start),
-	}, nil
+	}
+	if p.config.CacheEnabled && p.config.Cache != nil && cacheKey != "" {
+		_ = p.config.Cache.Set(cacheKey, &CachedResult{
+			Mode:      res.Mode,
+			Protocol:  res.Protocol,
+			ImageData: res.ImageData,
+			Output:    res.Output,
+			CreatedAt: time.Now(),
+		}, p.config.CacheTTL)
+	}
+	return res, nil
 }
 
 // Print renders the Mermaid diagram source using default settings and writes to os.Stdout.
