@@ -151,7 +151,7 @@ func (p *Printer) Render(ctx context.Context, mermaidSource string) (*RenderResu
 	if p.config.CacheEnabled && p.config.Cache != nil {
 		cacheKey = ComputeCacheKey(mermaidSource, &p.config)
 		if cached, ok := p.config.Cache.Get(cacheKey); ok {
-			return &RenderResult{
+			res := &RenderResult{
 				Mode:             cached.Mode,
 				Protocol:         cached.Protocol,
 				ImageData:        cached.ImageData,
@@ -159,7 +159,9 @@ func (p *Printer) Render(ctx context.Context, mermaidSource string) (*RenderResu
 				FallbackOccurred: false,
 				CacheHit:         true,
 				Duration:         time.Since(start),
-			}, nil
+			}
+			p.recordTelemetry(ctx, res, len(mermaidSource))
+			return res, nil
 		}
 	}
 
@@ -297,6 +299,7 @@ func (p *Printer) Render(ctx context.Context, mermaidSource string) (*RenderResu
 					CreatedAt: time.Now(),
 				}, p.config.CacheTTL)
 			}
+			p.recordTelemetry(ctx, res, len(mermaidSource))
 			return res, nil
 		}
 	}
@@ -333,7 +336,22 @@ func (p *Printer) Render(ctx context.Context, mermaidSource string) (*RenderResu
 			CreatedAt: time.Now(),
 		}, p.config.CacheTTL)
 	}
+	p.recordTelemetry(ctx, res, len(mermaidSource))
 	return res, nil
+}
+
+func (p *Printer) recordTelemetry(ctx context.Context, res *RenderResult, sourceLen int) {
+	if p.config.Telemetry != nil && res != nil {
+		p.config.Telemetry.RecordRender(ctx, TelemetryEvent{
+			Duration:         res.Duration,
+			Mode:             res.Mode,
+			Protocol:         res.Protocol,
+			FallbackOccurred: res.FallbackOccurred,
+			FallbackReason:   res.FallbackReason,
+			CacheHit:         res.CacheHit,
+			SourceLength:     sourceLen,
+		})
+	}
 }
 
 // Print renders the Mermaid diagram source using default settings and writes to os.Stdout.

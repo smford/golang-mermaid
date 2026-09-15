@@ -1,6 +1,7 @@
 package mermaid
 
 import (
+	"context"
 	"io"
 	"os"
 	"time"
@@ -142,6 +143,9 @@ type Config struct {
 
 	// TerminalEnv provides environment variable lookup. Defaults to osEnv.
 	TerminalEnv TerminalEnv
+
+	// Telemetry receives structured render metrics for SRE observability and Prometheus integration.
+	Telemetry TelemetryRecorder
 }
 
 // Option configures a Config struct.
@@ -177,6 +181,7 @@ func DefaultConfig() Config {
 		BoxFrame:                 false,
 		Title:                    "",
 		TerminalEnv:              DefaultTerminalEnv,
+		Telemetry:                nil,
 	}
 }
 
@@ -396,6 +401,24 @@ func WithInteractive(interactive bool) Option {
 		c.Interactive = interactive
 	}
 }
+
+// WithTelemetry registers a TelemetryRecorder (e.g. StatsRecorder or OpenTelemetry bridge)
+// to receive structured metrics for every diagram rendered.
+func WithTelemetry(recorder TelemetryRecorder) Option {
+	return func(c *Config) {
+		c.Telemetry = recorder
+	}
+}
+
+// WithTelemetryFunc registers a functional callback as the TelemetryRecorder.
+func WithTelemetryFunc(fn func(ctx context.Context, event TelemetryEvent)) Option {
+	return func(c *Config) {
+		if fn != nil {
+			c.Telemetry = TelemetryFunc(fn)
+		}
+	}
+}
+
 
 
 

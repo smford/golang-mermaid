@@ -189,6 +189,8 @@ err := printer.PrintFile("testdata/incident_response.mmd")
 | `WithCacheTTL(duration)` | Time-to-live for cached diagram renders | `24h` |
 | `WithImageRenderer(r)` | Supply a custom implementation of `ImageRenderer` | Resilient chain |
 | `WithTextRenderer(r)` | Supply a custom implementation of `TextRenderer` | Fallback text |
+| `WithTelemetry(recorder)` | Register a metrics recorder (`StatsRecorder` or custom APM adapter) | `nil` |
+| `WithTelemetryFunc(fn)` | Register a functional callback for render telemetry | `nil` |
 
 ---
 
@@ -316,6 +318,59 @@ All graphics escape codes (Kitty APC, iTerm2 OSC, and Sixel DCS) automatically d
 | **Alacritty** | `none` | 🔤 Unicode Box Art | Graceful fallback (terminal does not support graphics) |
 | **CI/CD Runners** | `none` | 🔤 Unicode / ASCII | Graceful fallback (non-interactive TTY) |
 | **Output piped to file** | `none` | 🔤 Unicode / ASCII | Safe TTY detection protects output files from binary escape codes |
+
+---
+
+## Production Telemetry & Prometheus Metrics
+
+For SRE operations and cluster observability, `golang-mermaid` includes built-in telemetry:
+
+```go
+stats := mermaid.NewStatsRecorder()
+
+printer := mermaid.New(
+    mermaid.WithTelemetry(stats),
+)
+
+// Perform diagram renders...
+printer.PrintFile("testdata/architecture.mmd")
+
+// Access accumulated SRE metrics:
+fmt.Printf("Total Renders:   %d\n", stats.TotalRenders)
+fmt.Printf("Image Renders:   %d\n", stats.ImageRenders)
+fmt.Printf("Text Renders:    %d\n", stats.TextRenders)
+fmt.Printf("Cache Hits:      %d\n", stats.CacheHits)
+fmt.Printf("Fallbacks:       %d\n", stats.Fallbacks)
+fmt.Printf("Average Latency: %v\n", stats.AverageDuration())
+
+// Export Prometheus exposition metrics format:
+fmt.Println(stats.ExportPrometheus())
+```
+
+In the CLI tool, pass `-metrics` to export Prometheus metrics on exit to `stderr`:
+```bash
+mermaid-term -metrics testdata/architecture.mmd
+```
+
+Sample Prometheus exposition output:
+```text
+# HELP mermaid_renders_total Total number of diagram renders.
+# TYPE mermaid_renders_total counter
+mermaid_renders_total 1
+# HELP mermaid_renders_by_mode_total Total number of renders by mode.
+# TYPE mermaid_renders_by_mode_total counter
+mermaid_renders_by_mode_total{mode="image"} 1
+mermaid_renders_by_mode_total{mode="text"} 0
+# HELP mermaid_fallbacks_total Total number of image fallbacks triggered.
+# TYPE mermaid_fallbacks_total counter
+mermaid_fallbacks_total 0
+# HELP mermaid_cache_hits_total Total number of diagram cache hits.
+# TYPE mermaid_cache_hits_total counter
+mermaid_cache_hits_total 0
+# HELP mermaid_render_duration_seconds_total Total duration of diagram renders in seconds.
+# TYPE mermaid_render_duration_seconds_total counter
+mermaid_render_duration_seconds_total 0.042180
+```
 
 ---
 

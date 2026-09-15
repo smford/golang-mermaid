@@ -41,6 +41,7 @@ func main() {
 		markdown    = flag.Bool("markdown", false, "Parse Markdown document and render embedded ```mermaid blocks inline")
 		probe       = flag.Bool("probe", false, "Probe terminal capabilities via in-band PTY escape queries (ideal for SSH sessions)")
 		interactive = flag.Bool("interactive", false, "Launch interactive 2D pan & zoom pager for large diagrams")
+		metrics     = flag.Bool("metrics", false, "Print Prometheus-compatible SRE telemetry metrics to stderr on exit")
 	)
 
 	flag.Usage = func() {
@@ -168,6 +169,13 @@ func main() {
 	}
 	if *cacheDir != "" {
 		printerOpts = append(printerOpts, mermaid.WithCacheDir(*cacheDir))
+	}
+	if *metrics {
+		stats := mermaid.NewStatsRecorder()
+		printerOpts = append(printerOpts, mermaid.WithTelemetry(stats))
+		defer func() {
+			fmt.Fprintf(os.Stderr, "\n# golang-mermaid Prometheus Telemetry Metrics:\n%s", stats.ExportPrometheus())
+		}()
 	}
 
 	printer := mermaid.New(printerOpts...)

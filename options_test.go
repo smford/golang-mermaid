@@ -36,6 +36,7 @@ func TestOptions(t *testing.T) {
 		WithOffline(true),
 		WithTerminalProbe(true),
 		WithInteractive(true),
+		WithTelemetry(NewStatsRecorder()),
 		WithOnFallback(func(reason string, err error) {
 			fallbackTriggered = true
 		}),
@@ -116,6 +117,9 @@ func TestOptions(t *testing.T) {
 	}
 	if !cfg.Interactive {
 		t.Errorf("expected Interactive true")
+	}
+	if cfg.Telemetry == nil {
+		t.Errorf("expected Telemetry to be set")
 	}
 	if cfg.OnFallback != nil {
 		cfg.OnFallback("test", nil)
