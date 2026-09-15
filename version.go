@@ -6,7 +6,7 @@ import (
 )
 
 // Version represents the current Semantic Version (SemVer) of the golang-mermaid module.
-var Version = "1.1.0"
+var Version = "1.1.1"
 
 func init() {
 	if info, ok := debug.ReadBuildInfo(); ok {
